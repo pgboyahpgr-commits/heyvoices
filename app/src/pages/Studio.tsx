@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Check, ChevronDown, ChevronRight, Clock, Copy, Download, Dices, Layers, Loader2,
-  RefreshCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
+  Play, RefreshCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { fileUrl } from '../lib/api'
@@ -12,6 +12,12 @@ import { Avatar, engineLabel, fmtDuration, Slider, Toggle, timeAgo } from '../co
 
 const INSTRUCT_CHIPS = ['whisper softly', 'excited and energetic', 'calm, slow, cinematic', 'sad and reflective', 'authoritative news anchor']
 const TAG_CHIPS = ['[laugh]', '[chuckle]', '[sigh]', '[gasp]', '[whisper]', '[angry]', '[happy]', '[sad]', '[dramatic]', '[narration]']
+const TEMPLATES: { name: string; text: string }[] = [
+  { name: 'Podcast intro', text: 'Welcome back to the show. [[pause:400ms]] Today we are talking about something that changes everything.' },
+  { name: 'Game NPC', text: "Halt! Who goes there? [[pause:300ms]] Oh… it's you. The whole village has been asking about you." },
+  { name: 'Audiobook', text: 'The wind carried the smell of rain across the valley, and for a moment, everything was still.' },
+  { name: 'Ad read', text: 'Stop scrolling. [[pause:250ms]] This is the last productivity tool you will ever need.' },
+]
 
 export default function Studio() {
   const { voices, models, generations, selectedVoiceId, selectVoice, draft, setDraft,
@@ -19,11 +25,25 @@ export default function Studio() {
   const textRef = useRef<HTMLTextAreaElement | null>(null)
   const [deliveryOpen, setDeliveryOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [takeQuery, setTakeQuery] = useState('')
+  const [takeFilter, setTakeFilter] = useState<'all' | 'favorites'>('all')
 
   const voice = voices.find((v) => v.id === selectedVoiceId) || null
   const readyModels = models.filter((m) => m.state === 'ready' || m.state === 'loaded')
   const anyModelReady = readyModels.length > 0
   const busy = !!job && (job.status === 'queued' || job.status === 'running')
+
+  const chars = draft.text.trim().length
+  const words = draft.text.trim() ? draft.text.trim().split(/\s+/).length : 0
+  const estSec = chars / 14
+
+  const filteredGens = useMemo(() => {
+    let list = generations
+    if (takeFilter === 'favorites') list = list.filter((g) => g.favorite)
+    const q = takeQuery.trim().toLowerCase()
+    if (q) list = list.filter((g) => (g.text + ' ' + g.voice_name).toLowerCase().includes(q))
+    return list
+  }, [generations, takeFilter, takeQuery])
 
   const engineOf = (id: string) => models.find((m) => m.id === id)?.name ?? id
   const loadedList = Object.values(info?.engines_loaded ?? {}).map(engineOf)
@@ -94,6 +114,27 @@ export default function Studio() {
           value={draft.text}
           onChange={(e) => setDraft({ text: e.target.value })}
         />
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {chars === 0 ? (
+            <>
+              <span className="text-[11px] text-fg-dim">Try:</span>
+              {TEMPLATES.map((t) => (
+                <button key={t.name} className="chip !py-0.5 !text-[10.5px]" onClick={() => setDraft({ text: t.text })}>
+                  {t.name}
+                </button>
+              ))}
+            </>
+          ) : (
+            <span className="text-[11px] text-fg-dim">
+              Scripts render in chunks with sentence-aware pauses — use <span className="chip !cursor-default !py-0 !text-[10px] font-mono">[[pause:600ms]]</span> anywhere.
+            </span>
+          )}
+          <div className="flex-1" />
+          <span className="text-[11px] tabular-nums text-fg-dim">
+            {chars} chars · {words} words · ~{fmtDuration(estSec)}
+          </span>
+        </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-4">
           <VoicePicker voices={voices} selected={voice} onSelect={(v) => selectVoice(v.id)} />
@@ -226,11 +267,34 @@ export default function Studio() {
 
       {/* takes */}
       <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-[15px] font-semibold">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="flex shrink-0 items-center gap-2 text-[15px] font-semibold">
             <Clock size={15} className="text-fg-dim" /> Takes
             <span className="badge">{generations.length}</span>
           </h2>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-line bg-ink-850 p-0.5">
+              {([['all', 'All'], ['favorites', 'Starred']] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  className={clsx('rounded-md px-2.5 py-1 text-[11px] font-medium transition-all',
+                    takeFilter === id ? 'bg-white/[0.08] text-fg' : 'text-fg-dim hover:text-fg-muted')}
+                  onClick={() => setTakeFilter(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="relative w-[210px]">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-dim" />
+              <input
+                className="input !py-1.5 !pl-8 !text-[12px]"
+                placeholder="Search takes…"
+                value={takeQuery}
+                onChange={(e) => setTakeQuery(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
         {generations.length === 0 ? (
           <div className="panel flex flex-col items-center gap-2 py-12 text-center">
@@ -240,9 +304,11 @@ export default function Studio() {
               Clone a voice from a short clip on the Voices page, then hit Generate — your audio history will appear here.
             </div>
           </div>
+        ) : filteredGens.length === 0 ? (
+          <div className="panel py-10 text-center text-[12.5px] text-fg-dim">No takes match this filter.</div>
         ) : (
           <div className="flex flex-col gap-2">
-            {generations.map((g) => (
+            {filteredGens.map((g) => (
               <TakeRow key={g.id} gen={g} />
             ))}
           </div>
@@ -381,6 +447,9 @@ function TakeRow({ gen }: { gen: Generation }) {
       </div>
 
       <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <button className="icon-btn" title="Play" onClick={(e) => { e.stopPropagation(); useApp.getState().playGen(gen) }}>
+          <Play size={14} />
+        </button>
         <button className="icon-btn" title="Copy text" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(gen.text); toast('info', 'Text copied') }}>
           <Copy size={14} />
         </button>

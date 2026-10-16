@@ -1,12 +1,13 @@
 import clsx from 'clsx'
 import {
-  AudioLines, Box, Braces, Layers, Settings2, Sparkles, Users, Zap,
+  AudioLines, BookOpen, Box, Braces, Layers, Search, Settings2, Sparkles, Users, Zap,
 } from 'lucide-react'
 import { useApp } from '../lib/store'
 import type { Page } from '../lib/store'
 
 const NAV: { id: Page; label: string; icon: React.ReactNode }[] = [
   { id: 'studio', label: 'Studio', icon: <Sparkles size={16} /> },
+  { id: 'story', label: 'Story', icon: <BookOpen size={16} /> },
   { id: 'voices', label: 'Voices', icon: <Users size={16} /> },
   { id: 'batch', label: 'Batch', icon: <Layers size={16} /> },
   { id: 'models', label: 'Models', icon: <Box size={16} /> },
@@ -42,6 +43,18 @@ export default function Sidebar() {
           <div className="text-[15px] font-bold leading-tight tracking-[-0.01em]">HeyVoice</div>
           <div className="text-[10px] font-medium leading-tight text-fg-dim">Local Voice Studio</div>
         </div>
+      </div>
+
+      {/* quick actions */}
+      <div className="px-2.5 pb-2">
+        <button
+          className="flex w-full items-center gap-2 rounded-[10px] border border-line bg-white/[0.02] px-3 py-[7px] text-[12px] text-fg-dim transition-colors hover:border-line-strong hover:text-fg-muted"
+          onClick={() => useApp.getState().setPaletteOpen(true)}
+        >
+          <Search size={13} />
+          Quick actions
+          <kbd className="ml-auto rounded border border-line bg-white/[0.04] px-1.5 py-px font-sans text-[9.5px] font-semibold text-fg-dim">Ctrl K</kbd>
+        </button>
       </div>
 
       {/* nav */}

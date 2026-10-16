@@ -42,7 +42,8 @@ with requests.get("http://127.0.0.1:17300/system/events", stream=True) as r:
 ### `GET /settings` · `PATCH /settings`
 PATCH expects `{ "patch": { ... } }`. Settings keys: `output_format`, `normalize_loudness`,
 `target_lufs`, `chunk_max_chars`, `crossfade_ms`, `default_engine`, `default_language`,
-`auto_unload`, `vram_budget_gb`.
+`auto_unload`, `vram_budget_gb`, `transcribe_size` (Whisper model for reference clips),
+`pronunciations` (`[{"from": "HeyVoice", "to": "Hey Voice"}]` — applied before synthesis).
 
 ## Voices
 
@@ -128,9 +129,31 @@ Changing samples invalidates the cached clone prompt automatically.
 ```
 On success, `result.generation` is the finished generation record (same shape as `GET /generations`).
 
+### `POST /generate/story` — multi-speaker render
+Renders a script where **each line picks its own voice**, then stitches everything into one track.
+```json
+{
+  "lines": [
+    { "voice_id": "a1b2...", "text": "We need to go. Now.", "pause_after_ms": 600 },
+    { "voice_id": "f9e8...", "text": "Then we go together.", "pause_after_ms": 400,
+      "instruct": "whispering, scared" }
+  ],
+  "output_format": "wav",
+  "normalize": true,
+  "effects": {}
+}
+```
+→ `{ "job_id": "c3d4..." }`. The finished generation carries
+`params.story = true`, `params.lines` (the script, for re-editing) and
+`params.segments` (`[{ "voice_name", "text", "duration" }]` per line).
+
 ### `GET /generations?limit=100&batch_id=…`
 Newest first. Each record includes `file`, `duration`, `peaks` (96 values for waveform
 sparklines), `engine`, `model`, `params`.
+
+### `GET /generations/export?batch_id=…`
+Streams a `.zip` with every take of a batch, named `<Voice Name> - <id>.<ext>` — ideal for
+game-line drops and chapter exports.
 
 ### `POST /generations/{id}/regenerate`
 Re-queues the same text/voice/settings as a fresh take → `{ "job_id": ... }`.

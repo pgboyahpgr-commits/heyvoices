@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Check, ChevronRight, CircleDashed, Loader2, Mic, Pencil, Play, Plus, Search, Sparkles,
-  Square, Trash2, Upload, UserRound, Wand2, X,
+  Square, Trash2, Upload, UserRound, Wand2, X, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { BASE, api, fileUrl } from '../lib/api'
@@ -9,6 +9,25 @@ import { useApp } from '../lib/store'
 import type { IngestResult, Voice } from '../lib/types'
 import { LANGUAGES, langLabel } from '../lib/types'
 import { Avatar, Modal, Progress, engineLabel, fmtDuration } from '../components/ui'
+
+// Short lines for one-click voice previews, per language.
+const PREVIEW_TEXT = (lang: string) => {
+  const map: Record<string, string> = {
+    en: 'Hi there! This is a quick preview of how I sound. Everything runs locally on your machine.',
+    ja: 'こんにちは！これは私の声のプレビューです。すべてあなたのパソコンで実行されています。',
+    ko: '안녕하세요! 제 목소리 미리듣기입니다. 모든 것이 당신의 컴퓨터에서 실행됩니다.',
+    zh: '你好！这是我的语音预览。一切都在你的电脑上本地运行。',
+    es: '¡Hola! Esta es una pequeña muestra de mi voz. Todo se ejecuta localmente en tu equipo.',
+    fr: 'Bonjour ! Ceci est un aperçu de ma voix. Tout fonctionne en local sur votre machine.',
+    de: 'Hallo! Das ist eine kleine Vorschau meiner Stimme. Alles läuft lokal auf deinem Rechner.',
+    pt: 'Olá! Esta é uma prévia da minha voz. Tudo roda localmente no seu computador.',
+    it: "Ciao! Questa è un'anteprima della mia voce. Tutto viene eseguito sul tuo computer.",
+    hi: 'नमस्ते! यह मेरी आवाज़ की एक झलक है। सब कुछ आपके कंप्यूटर पर ही चलता है।',
+    ru: 'Привет! Это небольшой пример моего голоса. Всё работает локально на вашем компьютере.',
+    ar: 'مرحباً! هذه معاينة سريعة لصوتي. كل شيء يعمل محلياً على جهازك.',
+  }
+  return map[lang] || map.en
+}
 
 export default function Voices() {
   const voices = useApp((s) => s.voices)
@@ -21,6 +40,14 @@ export default function Voices() {
   const [designOpen, setDesignOpen] = useState(false)
   const [editVoice, setEditVoice] = useState<Voice | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Voice | null>(null)
+
+  // Command-palette intents ("New voice", "Design a voice")
+  const intent = useApp((s) => s.intent)
+  const setIntent = useApp((s) => s.setIntent)
+  useEffect(() => {
+    if (intent === 'new-voice') { setWizardOpen(true); setIntent(null) }
+    else if (intent === 'design-voice') { setDesignOpen(true); setIntent(null) }
+  }, [intent, setIntent])
 
   const filtered = useMemo(() => {
     let list = voices
@@ -127,8 +154,10 @@ function VoiceCard({ voice, onUse, onEdit, onDelete }: {
   voice: Voice; onUse: () => void; onEdit: () => void; onDelete: () => void
 }) {
   const toast = useApp((s) => s.toast)
+  const generate = useApp((s) => s.generate)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
 
   const playSample = () => {
     if (!voice.samples.length) return
@@ -137,6 +166,16 @@ function VoiceCard({ voice, onUse, onEdit, onDelete }: {
     audioRef.current = audio
     audio.onended = () => setPlaying(false)
     audio.play().then(() => setPlaying(true)).catch(() => {})
+  }
+
+  // For voices without a reference clip (presets, described designs) — render a short line.
+  const preview = async () => {
+    setPreviewing(true)
+    try {
+      await generate({ text: PREVIEW_TEXT(voice.language), voiceId: voice.id })
+    } finally {
+      setPreviewing(false)
+    }
   }
 
   return (
@@ -166,13 +205,22 @@ function VoiceCard({ voice, onUse, onEdit, onDelete }: {
       </div>
 
       <div className="flex items-center gap-1.5 border-t border-line pt-3">
-        <button
-          className={clsx('btn !py-1.5 !text-[12px] flex-1 justify-center', !voice.samples.length && 'opacity-40 pointer-events-none')}
-          onClick={playSample}
-        >
-          {playing ? <Square size={11} className="fill-current" /> : <Play size={12} />}
-          {playing ? 'Stop' : 'Sample'}
-        </button>
+        {voice.samples.length > 0 ? (
+          <button className="btn !py-1.5 !text-[12px] flex-1 justify-center" onClick={playSample}>
+            {playing ? <Square size={11} className="fill-current" /> : <Play size={12} />}
+            {playing ? 'Stop' : 'Sample'}
+          </button>
+        ) : (
+          <button
+            className={clsx('btn !py-1.5 !text-[12px] flex-1 justify-center', previewing && 'opacity-60')}
+            title="Generate a short preview with this voice"
+            disabled={previewing}
+            onClick={preview}
+          >
+            {previewing ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
+            Preview
+          </button>
+        )}
         <button className="btn !py-1.5 !text-[12px] flex-1 justify-center" onClick={onUse}>
           <Sparkles size={12} /> Use
         </button>

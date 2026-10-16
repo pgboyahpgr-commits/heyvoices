@@ -27,6 +27,7 @@ export default function Batch() {
   const [rows, setRows] = useState<Row[]>([newRow(), newRow()])
   const [running, setRunning] = useState(false)
   const [format, setFormat] = useState('wav')
+  const [lastBatchId, setLastBatchId] = useState('')
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   const clonedFirst = useMemo(() => {
@@ -77,6 +78,7 @@ export default function Batch() {
     if (!pending.length) { toast('error', 'Add at least one row with a voice and text'); return }
     setRunning(true)
     const batchId = Math.random().toString(36).slice(2, 10)
+    setLastBatchId(batchId)
     for (const row of pending) {
       patchRow(row.key, { status: 'queued', error: undefined })
     }
@@ -106,14 +108,14 @@ export default function Batch() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-[260px]">
           <h1 className="text-[22px] font-bold tracking-[-0.02em]">Batch</h1>
           <p className="mt-0.5 text-[12.5px] text-fg-muted">
             Bulk-generate voice lines — perfect for game dialogue, audiobook chapters, or content pipelines.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select className="select !w-auto" value={format} onChange={(e) => setFormat(e.target.value)}>
             {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
           </select>
@@ -125,6 +127,22 @@ export default function Batch() {
             <FileSpreadsheet size={14} /> Load CSV
           </button>
           <button className="btn" onClick={openOutputs}><FolderOpen size={14} /> Output folder</button>
+          {lastBatchId && progress > 0 && (
+            <button
+              className="btn"
+              title="Download every finished take of the last run as a .zip"
+              onClick={() => {
+                const a = document.createElement('a')
+                a.href = api.exportBatchUrl(lastBatchId)
+                a.download = `heyvoice-batch-${lastBatchId}.zip`
+                document.body.appendChild(a)
+                a.click()
+                a.remove()
+              }}
+            >
+              <Download size={14} /> Export .zip
+            </button>
+          )}
           <button className="btn btn-primary" disabled={running} onClick={runAll}>
             {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
             {running ? `${progress}/${rows.length}` : 'Generate all'}

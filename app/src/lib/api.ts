@@ -55,6 +55,9 @@ export const api = {
   // generation
   generate: (body: Record<string, any>) =>
     fetch(`${BASE}/generate`, { method: 'POST', headers: json, body: JSON.stringify(body) }).then((r) => j<{ job_id: string }>(r)),
+  generateStory: (body: Record<string, any>) =>
+    fetch(`${BASE}/generate/story`, { method: 'POST', headers: json, body: JSON.stringify(body) }).then((r) => j<{ job_id: string }>(r)),
+  exportBatchUrl: (batchId: string) => `${BASE}/generations/export?batch_id=${encodeURIComponent(batchId)}`,
   job: (id: string) => fetch(`${BASE}/jobs/${id}`).then((r) => j<JobInfo>(r)),
   generations: (limit = 100) => fetch(`${BASE}/generations?limit=${limit}`).then((r) => j<Generation[]>(r)),
   patchGeneration: (id: string, patch: Record<string, any>) =>

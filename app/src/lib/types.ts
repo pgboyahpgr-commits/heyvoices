@@ -78,6 +78,8 @@ export interface Settings {
   default_language: string
   auto_unload: boolean
   vram_budget_gb: number
+  transcribe_size: string
+  pronunciations: { from: string; to: string }[]
 }
 
 export interface SystemInfo {
@@ -113,6 +115,14 @@ export interface EffectsOptions {
   highpass_hz: number
   lowpass_hz: number
   compressor: boolean
+}
+
+export interface StoryLine {
+  id: string
+  voiceId: string
+  text: string
+  pauseAfterMs: number
+  instruct?: string
 }
 
 export const DEFAULT_EFFECTS: EffectsOptions = {

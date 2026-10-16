@@ -157,6 +157,30 @@ def ensure_model(engine_id: str, model_key: str) -> None:
 
 
 # ---------------------------------------------------------------- handlers
+def _apply_pronunciations(text: str, settings: dict) -> str:
+    """User-defined find→replace rules (names, acronyms, IPA-ish hints)."""
+    for rule in settings.get("pronunciations") or []:
+        src = (rule.get("from") or "").strip()
+        if src and src in text:
+            text = text.replace(src, rule.get("to") or "")
+    return text
+
+
+def _voice_ref(voice: dict | None) -> tuple[str, str | None, str | None, str]:
+    """(speaker, ref_audio, ref_text, voice_key) for a store voice."""
+    if not voice:
+        return "", None, None, ""
+    meta = voice.get("meta") or {}
+    speaker = meta.get("speaker", "")
+    voice_key = voice["id"]
+    ref_audio = ref_text = None
+    if voice.get("samples") and not speaker:
+        sample = voice["samples"][0]
+        ref_audio = str(VOICES_DIR / voice["id"] / sample["file"])
+        ref_text = sample.get("transcript") or None
+    return speaker, ref_audio, ref_text, voice_key
+
+
 def h_generate(job: Job, p: dict) -> None:
     settings = load_settings()
     voice = store.get_voice(p["voice_id"]) if p.get("voice_id") else None
@@ -168,20 +192,10 @@ def h_generate(job: Job, p: dict) -> None:
     text = (p.get("text") or "").strip()
     if not text:
         raise RuntimeError("Text is empty")
+    text = _apply_pronunciations(text, settings)
 
     # voice reference wiring
-    speaker = ""
-    ref_audio = None
-    ref_text = None
-    voice_key = ""
-    if voice:
-        meta = voice.get("meta") or {}
-        speaker = meta.get("speaker", "")
-        voice_key = voice["id"]
-        if voice.get("samples") and not speaker:
-            sample = voice["samples"][0]
-            ref_audio = str(VOICES_DIR / voice["id"] / sample["file"])
-            ref_text = sample.get("transcript") or None
+    speaker, ref_audio, ref_text, voice_key = _voice_ref(voice)
 
     language = p.get("language") or (voice or {}).get("language") or settings["default_language"]
     chunks = chunk_text(text, int(settings["chunk_max_chars"]))
@@ -244,6 +258,108 @@ def h_generate(job: Job, p: dict) -> None:
     events.emit("generation", gen)
 
 
+def h_story(job: Job, p: dict) -> None:
+    """Multi-speaker render: each line picks its own voice; one stitched file out."""
+    settings = load_settings()
+    lines = [l for l in (p.get("lines") or []) if (l.get("text") or "").strip()]
+    if not lines:
+        raise RuntimeError("A story needs at least one line")
+
+    parts = []
+    pauses: list[int] = []
+    segments: list[dict] = []
+    sr = 24000
+    prev_pause_after = 0
+    total = len(lines)
+
+    for li, line in enumerate(lines):
+        text = _apply_pronunciations((line.get("text") or "").strip(), settings)
+        voice = store.get_voice(line["voice_id"]) if line.get("voice_id") else None
+        if not voice:
+            raise RuntimeError(f"Line {li + 1}: no voice selected (or the voice was deleted)")
+        engine_id, model_key = resolve_engine(voice, line.get("engine"), line.get("model"))
+        ensure_model(engine_id, model_key)
+        engine = get_engine(engine_id)
+        speaker, ref_audio, ref_text, voice_key = _voice_ref(voice)
+
+        language = line.get("language") or (voice or {}).get("language") or settings["default_language"]
+        chunks = chunk_text(text, int(settings["chunk_max_chars"]))
+        line_seconds = 0.0
+        line_parts = 0
+        for ci, ch in enumerate(chunks):
+            req = GenRequest(
+                text=ch["text"], language=language,
+                instruct=(line.get("instruct") or p.get("instruct", "")),
+                exaggeration=(line.get("exaggeration") if line.get("exaggeration") is not None
+                              else p.get("exaggeration")),
+                speaker=speaker, temperature=p.get("temperature"), seed=None,
+                ref_audio=ref_audio, ref_text=ref_text, voice_key=voice_key,
+            )
+            audio, s = engine.generate(req)
+            if audio.size == 0:
+                continue
+            sr = s
+            parts.append(audio)
+            if len(parts) > 1:  # gap before this part
+                pauses.append(prev_pause_after if ci == 0 else ch["pause_before_ms"])
+            line_seconds += len(audio) / sr
+            line_parts += 1
+        prev_pause_after = int(line.get("pause_after_ms") or 400)
+        if line_parts:
+            segments.append({
+                "voice_id": (voice or {}).get("id", ""),
+                "voice_name": (voice or {}).get("name", "Voice"),
+                "text": (line.get("text") or "").strip(),
+                "duration": round(line_seconds, 3),
+            })
+        job.set_progress(0.04 + 0.82 * (li + 1) / total, f"line {li + 1}/{total}")
+
+    if not parts:
+        raise RuntimeError("Engines returned no audio for this story")
+
+    job.set_progress(0.88, "stitching")
+    full = stitch(parts, sr, int(settings["crossfade_ms"]), pauses)
+    full = trim_silence(full, sr)
+
+    fx = p.get("effects") or {}
+    if fx:
+        job.set_progress(0.9, "effects")
+        full = apply_effects(full, sr, fx)
+
+    do_norm = p.get("normalize")
+    if do_norm is None:
+        do_norm = settings["normalize_loudness"]
+    if do_norm:
+        job.set_progress(0.93, "normalizing")
+        full = normalize_loudness(full, sr, float(settings["target_lufs"]))
+
+    job.set_progress(0.95, "writing files")
+    gid = store.new_id()
+    master = OUTPUTS_DIR / f"{gid}.wav"
+    from .audio import save_wav
+
+    save_wav(master, full, sr)
+    fmt = (p.get("output_format") or settings["output_format"] or "wav").lower()
+    final = export_audio(master, OUTPUTS_DIR / f"{gid}.{fmt}", fmt)
+
+    names: list[str] = []
+    for s in segments:
+        if s["voice_name"] not in names:
+            names.append(s["voice_name"])
+    label = " + ".join(names[:3]) + (f" +{len(names) - 3}" if len(names) > 3 else "")
+    gen = store.add_generation(
+        id_=gid, voice_id="", voice_name=label or "Story",
+        text="\n".join(s["text"] for s in segments),
+        engine="multi", model="story", language=p.get("language") or "auto",
+        params={"story": True, "lines": lines, "segments": segments,
+                "effects": fx, "format": fmt},
+        file=final.name, duration=duration_of(master), peaks=compute_peaks(full),
+        batch_id=p.get("batch_id", ""),
+    )
+    job.result = {"generation": gen}
+    events.emit("generation", gen)
+
+
 def h_transcribe(job: Job, p: dict) -> None:
     from .engines.whisper_asr import asr
 
@@ -257,6 +373,7 @@ def h_transcribe(job: Job, p: dict) -> None:
 
 HANDLERS: dict[str, Callable[[Job, dict], None]] = {
     "generate": h_generate,
+    "story": h_story,
     "transcribe": h_transcribe,
 }
 

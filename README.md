@@ -8,7 +8,7 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
 ```
 ┌────────────────────────────────────────────────────────────┐
 │  HeyVoice Studio (Electron + React)                        │
-│    Studio · Voices · Batch · Models · API · Settings       │
+│    Studio · Story · Voices · Batch · Models · API · Settings│
 └──────────────────────────┬─────────────────────────────────┘
                            │  localhost REST + SSE  (127.0.0.1:17300)
 ┌──────────────────────────▼─────────────────────────────────┐
@@ -28,14 +28,25 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   Chatterbox clones the timbre. Reusable forever, no per-use cost.
 - **Voice design** — describe a voice in words ("calm middle-aged male, slightly husky") and
   generate it, then save the result as a clonable voice.
+- **Story mode** — write multi-speaker scripts: every line gets its own voice, pause length and
+  optional delivery instruction, rendered into one stitched track. Ideal for audiobooks, podcasts,
+  game dialogue and NPC conversations.
+- **One-click previews** — hear any voice (cloned or preset) with a single click; takes auto-play
+  when they finish.
 - **25+ languages** — Qwen3-TTS (EN, ZH, JA, KO, DE, FR, RU, PT, ES, IT), Chatterbox Multilingual
   v3 (25 languages), Kokoro presets.
 - **Delivery control** — natural-language instructions (`speak slowly, whisper`) for Qwen preset
   voices; emotion-exaggeration slider and expressive tags (`[laugh]`, `[whisper]`) for Chatterbox.
 - **Script mode** — `[[pause:600ms]]` markers, automatic sentence-aware chunking, crossfade
-  stitching, loudness normalization to −16 LUFS.
+  stitching, loudness normalization to −16 LUFS, plus find→replace **pronunciation rules**
+  ("HeyVoice" → "Hey Voice") applied to every generation.
 - **Effects** — gain, pitch shift, reverb, compressor (via Pedalboard), applied before export.
-- **Batch** — CSV in (`Voice Name,Text` per line), named audio files out; perfect for game lines.
+- **Batch** — CSV in (`Voice Name,Text` per line), named audio files out, one-click **ZIP export**
+  for the whole batch — perfect for game lines.
+- **Player dock** — waveform scrubbing, playback speed (1× / 1.25× / 1.5× / 0.75×), loop, star,
+  re-roll with a new seed, download.
+- **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
+  open folders…).
 - **Local API** — REST + SSE for apps, agents, and stream tooling. `POST /speak` is a one-call
   text-to-audio endpoint.
 - **8 GB VRAM friendly** — one model resident at a time, automatic LRU unloading, bf16, SDPA
@@ -77,7 +88,7 @@ backend/
   scripts/             # setup.ps1, fix_install.ps1, smoke_clone.py
 app/                   # Electron + React + Tailwind UI
   electron/main.cjs    # spawns the backend, hosts the window
-  src/pages/           # Studio · Voices · Batch · Models · API · Settings
+  src/pages/           # Studio · Story · Voices · Batch · Models · API · Settings
 docs/                  # architecture, models, roadmap, API
 models/                # downloaded weights (gitignored)
 data/                  # voices, outputs, SQLite db (gitignored)

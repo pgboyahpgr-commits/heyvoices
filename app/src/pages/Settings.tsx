@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FolderOpen, HardDrive, Info, Save, Zap } from 'lucide-react'
+import { ArrowRight, FolderOpen, HardDrive, Info, Plus, Save, Trash2, Type, Zap } from 'lucide-react'
 import { api } from '../lib/api'
 import { useApp } from '../lib/store'
 import type { Settings as SettingsType } from '../lib/types'
@@ -121,6 +121,75 @@ export default function Settings() {
               onChange={(v) => patch({ normalize_loudness: v })} />
             <Toggle label="Auto-unload models when switching (VRAM guard)" checked={settings.auto_unload}
               onChange={(v) => patch({ auto_unload: v })} />
+          </div>
+        </div>
+      </section>
+
+      {/* text & pronunciation */}
+      <section className="panel p-5">
+        <h2 className="mb-1.5 flex items-center gap-2 text-[13.5px] font-semibold">
+          <Type size={15} className="text-accent-soft" /> Text &amp; pronunciation
+        </h2>
+        <p className="mb-4 text-[11.5px] leading-relaxed text-fg-dim">
+          Rewrite words right before synthesis — fix names, acronyms and loanwords
+          (<span className="font-mono text-fg-muted">HeyVoice</span> → <span className="font-mono text-fg-muted">Hey Voice</span>).
+          Case-sensitive, applied to every new generation and story line.
+        </p>
+        <div className="flex flex-col gap-2">
+          {(settings.pronunciations || []).map((rule, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                className="input flex-1 !text-[12.5px]"
+                placeholder="Replace…"
+                value={rule.from}
+                onChange={(e) => {
+                  const next = [...settings.pronunciations]
+                  next[i] = { ...next[i], from: e.target.value }
+                  patch({ pronunciations: next })
+                }}
+              />
+              <ArrowRight size={13} className="shrink-0 text-fg-dim" />
+              <input
+                className="input flex-1 !text-[12.5px]"
+                placeholder="with…"
+                value={rule.to}
+                onChange={(e) => {
+                  const next = [...settings.pronunciations]
+                  next[i] = { ...next[i], to: e.target.value }
+                  patch({ pronunciations: next })
+                }}
+              />
+              <button
+                className="icon-btn shrink-0 hover:!text-danger"
+                title="Remove rule"
+                onClick={() => patch({ pronunciations: settings.pronunciations.filter((_, j) => j !== i) })}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+          <div>
+            <button
+              className="btn"
+              onClick={() => patch({ pronunciations: [...(settings.pronunciations || []), { from: '', to: '' }] })}
+            >
+              <Plus size={14} /> Add rule
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 border-t border-line pt-4">
+          <div className="max-w-[300px]">
+            <div className="mb-1.5 text-[11.5px] font-medium text-fg-muted">Transcription model (Whisper)</div>
+            <select className="select" value={settings.transcribe_size}
+              onChange={(e) => patch({ transcribe_size: e.target.value })}>
+              {['tiny', 'base', 'small', 'medium', 'large-v3', 'turbo'].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <div className="mt-1.5 text-[11px] leading-relaxed text-fg-dim">
+              Used to transcribe reference clips when cloning. Bigger = more accurate, slower.
+            </div>
           </div>
         </div>
       </section>

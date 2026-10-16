@@ -42,6 +42,8 @@ DEFAULT_SETTINGS: dict = {
     "default_language": "en",
     "auto_unload": True,
     "vram_budget_gb": 6.5,
+    "transcribe_size": "small",      # whisper model used for reference transcripts
+    "pronunciations": [],            # [{"from": "HeyVoice", "to": "Hey Voice"}, ...]
 }
 
 _lock = Lock()

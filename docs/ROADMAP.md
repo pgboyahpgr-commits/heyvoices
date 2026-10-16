@@ -25,10 +25,13 @@
 - [ ] VRAM telemetry panel (live allocation graph)
 
 ## Phase 2 — Creation power tools
-- [ ] Stories mode: multi-speaker timeline with drag handles and per-line voices
+- [x] Stories mode: multi-speaker editor — per-line voice, pause and delivery, one stitched render
+- [x] Pronunciation overrides (Settings → Text & pronunciation, applied before synthesis)
+- [x] Batch v2: zip export of a finished batch
+- [x] Command palette (`Ctrl+K`): navigation + quick actions
 - [ ] Audiobook export: chapter splitting, 44.1 kHz re-render, ID3 tags
-- [ ] Text editor integrations: pronunciation overrides (SSML-lite), number/date expansion
-- [ ] Batch v2: per-row settings, retries, zip export, folder-per-character naming schemes
+- [ ] Text expansion: numbers/dates/units (SSML-lite)
+- [ ] Batch v2 (rest): per-row settings, retries, folder-per-character naming schemes
 
 ## Phase 3 — Integrations
 - [ ] MCP server (Claude/agents can call `speak` as a tool)

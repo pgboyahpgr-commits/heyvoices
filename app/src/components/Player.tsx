@@ -2,12 +2,14 @@
 import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import {
-  Download, Pause, Play, RefreshCcw, Star, Trash2, X,
+  Download, Pause, Play, RefreshCcw, Repeat, Star, Trash2, X,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { fileUrl } from '../lib/api'
 import { useApp } from '../lib/store'
 import { engineLabel, fmtDuration } from './ui'
+
+const RATES = [1, 1.25, 1.5, 0.75]
 
 export default function Player() {
   const gen = useApp((s) => s.selectedGen)
@@ -15,12 +17,15 @@ export default function Player() {
   const patchGen = useApp((s) => s.patchGen)
   const deleteGen = useApp((s) => s.deleteGen)
   const regenerate = useApp((s) => s.regenerate)
+  const playTick = useApp((s) => s.playTick)
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const wsRef = useRef<WaveSurfer | null>(null)
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
   const [dur, setDur] = useState(0)
+  const [rate, setRate] = useState(1)
+  const [loop, setLoop] = useState(false)
 
   useEffect(() => {
     if (!gen || !containerRef.current) return
@@ -41,13 +46,32 @@ export default function Player() {
       normalize: true,
     })
     wsRef.current = ws
-    ws.on('ready', () => setDur(ws.getDuration()))
+    ws.on('ready', () => { setDur(ws.getDuration()); ws.setPlaybackRate(rate) })
     ws.on('timeupdate', (t) => setTime(t))
     ws.on('play', () => setPlaying(true))
     ws.on('pause', () => setPlaying(false))
     ws.on('finish', () => setPlaying(false))
     return () => { ws.destroy(); wsRef.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gen?.id])
+
+  // quick-play requests from the take list / voice cards
+  useEffect(() => {
+    if (!playTick) return
+    const ws = wsRef.current
+    if (!ws) return
+    const doPlay = () => { ws.play().catch(() => {}) }
+    if (ws.getDuration() > 0) doPlay()
+    else ws.once('ready', doPlay)
+  }, [playTick])
+
+  // loop toggle on the underlying media element
+  useEffect(() => {
+    const media = (wsRef.current as any)?.getMediaElement?.()
+    if (!media) return
+    if (typeof media.then === 'function') media.then((el: HTMLMediaElement) => { el.loop = loop })
+    else media.loop = loop
+  }, [loop, gen?.id])
 
   if (!gen) return null
 
@@ -66,6 +90,7 @@ export default function Player() {
           <div className="mb-0.5 flex items-center gap-2">
             <span className="truncate text-[12.5px] font-semibold">{gen.voice_name}</span>
             <span className="badge badge-accent">{engineLabel(gen.engine)}</span>
+            {gen.params?.story && <span className="badge badge-info">story</span>}
             <span className="truncate text-[11px] text-fg-dim">{gen.text.slice(0, 90)}{gen.text.length > 90 ? '…' : ''}</span>
           </div>
           <div ref={containerRef} className="w-full" />
@@ -76,6 +101,24 @@ export default function Player() {
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
+          <button
+            className="icon-btn"
+            title={`Playback speed (${rate}×)`}
+            onClick={() => {
+              const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length]
+              setRate(next)
+              wsRef.current?.setPlaybackRate(next)
+            }}
+          >
+            <span className="text-[10.5px] font-semibold tabular-nums">{rate}×</span>
+          </button>
+          <button
+            className={clsx('icon-btn', loop && 'text-accent-soft')}
+            title="Loop playback"
+            onClick={() => setLoop(!loop)}
+          >
+            <Repeat size={14} />
+          </button>
           <button
             className="icon-btn"
             title={gen.favorite ? 'Unstar' : 'Star'}

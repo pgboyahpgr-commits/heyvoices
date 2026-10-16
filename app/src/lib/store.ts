@@ -1,9 +1,9 @@
 // Central app state: data + SSE live updates.
 import { create } from 'zustand'
 import { api } from './api'
-import type { Generation, JobInfo, ModelInfo, Settings, SystemInfo, Voice } from './types'
+import type { Generation, JobInfo, ModelInfo, Settings, StoryLine, SystemInfo, Voice } from './types'
 
-export type Page = 'studio' | 'voices' | 'batch' | 'models' | 'api' | 'settings'
+export type Page = 'studio' | 'story' | 'voices' | 'batch' | 'models' | 'api' | 'settings'
 
 export interface Toast {
   id: string
@@ -46,6 +46,10 @@ interface State {
   selectedGen: Generation | null
   toasts: Toast[]
   draft: StudioDraft
+  storyLines: StoryLine[]
+  playTick: number
+  paletteOpen: boolean
+  intent: string | null
 
   setPage: (p: Page) => void
   toast: (kind: Toast['kind'], message: string) => void
@@ -53,6 +57,10 @@ interface State {
   setDraft: (patch: Partial<StudioDraft>) => void
   selectVoice: (id: string | null) => void
   selectGen: (g: Generation | null) => void
+  playGen: (g: Generation) => void
+  setStoryLines: (lines: StoryLine[] | ((prev: StoryLine[]) => StoryLine[])) => void
+  setPaletteOpen: (open: boolean) => void
+  setIntent: (intent: string | null) => void
   init: () => void
   refreshAll: () => Promise<void>
   refreshInfo: () => Promise<void>
@@ -60,6 +68,7 @@ interface State {
   refreshModels: () => Promise<void>
   refreshGenerations: () => Promise<void>
   generate: (opts?: { text?: string; voiceId?: string | null; batchId?: string; silent?: boolean }) => Promise<string | null>
+  renderStory: (opts?: { lines?: StoryLine[]; format?: string }) => Promise<string | null>
   patchGen: (id: string, patch: Record<string, any>) => Promise<void>
   deleteGen: (id: string) => Promise<void>
   regenerate: (id: string) => Promise<void>
@@ -82,6 +91,10 @@ export const useApp = create<State>((set, get) => ({
   selectedVoiceId: null,
   selectedGen: null,
   toasts: [],
+  storyLines: [],
+  playTick: 0,
+  paletteOpen: false,
+  intent: null,
   draft: {
     text: '',
     language: 'auto',
@@ -105,6 +118,11 @@ export const useApp = create<State>((set, get) => ({
   setDraft: (patch) => set((s) => ({ draft: { ...s.draft, ...patch } })),
   selectVoice: (id) => set({ selectedVoiceId: id }),
   selectGen: (g) => set({ selectedGen: g }),
+  playGen: (g) => set((s) => ({ selectedGen: g, playTick: s.playTick + 1 })),
+  setStoryLines: (lines) =>
+    set((s) => ({ storyLines: typeof lines === 'function' ? lines(s.storyLines) : lines })),
+  setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setIntent: (intent) => set({ intent }),
 
   init: () => {
     const boot = async () => {
@@ -199,6 +217,34 @@ export const useApp = create<State>((set, get) => ({
     }
   },
 
+  renderStory: async (opts) => {
+    const { storyLines, info } = get()
+    const lines = (opts?.lines ?? storyLines)
+      .filter((l) => l.text.trim())
+      .map((l) => ({
+        voice_id: l.voiceId,
+        text: l.text.trim(),
+        pause_after_ms: l.pauseAfterMs,
+        instruct: l.instruct || '',
+      }))
+    if (!lines.length) {
+      get().toast('error', 'Add at least one line with text')
+      return null
+    }
+    const format = opts?.format || info?.settings.output_format || 'wav'
+    try {
+      const { job_id } = await api.generateStory({ lines, output_format: format })
+      set({
+        job: { id: job_id, type: 'story', label: `Story · ${lines.length} lines`, status: 'queued', progress: 0, note: '' },
+        jobStartedAt: Date.now(),
+      })
+      return job_id
+    } catch (err: any) {
+      get().toast('error', err.message || String(err))
+      return null
+    }
+  },
+
   patchGen: async (id, patch) => {
     await api.patchGeneration(id, patch)
     await get().refreshGenerations()
@@ -239,6 +285,7 @@ function handleEvent(
             set((s) => ({
               generations: [gen, ...s.generations.filter((g) => g.id !== gen.id)],
               selectedGen: gen,
+              playTick: s.playTick + 1,
             }))
           }
           get().toast('success', 'Take ready')

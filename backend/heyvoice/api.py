@@ -302,8 +302,9 @@ async def voices_ingest(files: list[UploadFile] = File(...),
         entry = {"upload_id": upload_id, "filename": f.filename, "converted": ok,
                  "duration": duration_of(wav) if ok else 0.0, "transcript": ""}
         if ok and transcribe:
+            size = load_settings().get("transcribe_size", "small")
             try:
-                entry["transcript"] = await asyncio.to_thread(jobs.transcribe_sync, str(wav), "small", 300)
+                entry["transcript"] = await asyncio.to_thread(jobs.transcribe_sync, str(wav), size, 300)
             except Exception as exc:  # noqa: BLE001
                 entry["transcript_error"] = str(exc)
         out.append(entry)
@@ -340,6 +341,27 @@ def generate(body: GenerateIn) -> dict:
     return {"job_id": job.id}
 
 
+class StoryIn(BaseModel):
+    lines: list[dict] = []
+    language: str | None = None
+    instruct: str = ""
+    exaggeration: float | None = None
+    temperature: float | None = None
+    normalize: bool | None = None
+    effects: dict = {}
+    output_format: str | None = None
+    batch_id: str = ""
+
+
+@router.post("/generate/story")
+def generate_story(body: StoryIn) -> dict:
+    lines = [l for l in body.lines if (l.get("text") or "").strip()]
+    if not lines:
+        raise HTTPException(400, "Add at least one line with text")
+    job = jobs.submit("story", f"Story · {len(lines)} lines", **body.model_dump())
+    return {"job_id": job.id}
+
+
 @router.get("/jobs/{job_id}")
 def job_status(job_id: str) -> dict:
     job = jobs.get_job(job_id)
@@ -356,6 +378,37 @@ def jobs_list() -> list[dict]:
 @router.get("/generations")
 def generations(limit: int = 100, batch_id: str | None = None) -> list[dict]:
     return store.list_generations(limit=limit, batch_id=batch_id)
+
+
+@router.get("/generations/export")
+def generations_export(batch_id: str) -> StreamingResponse:
+    """Zip every take of a batch — game lines / audiobook chapters in one download."""
+    import io
+    import re as _re
+    import zipfile
+
+    items = store.list_generations(limit=2000, batch_id=batch_id)
+    if not items:
+        raise HTTPException(404, "No generations in this batch")
+    buf = io.BytesIO()
+    used: set[str] = set()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for g in items:
+            f = OUTPUTS_DIR / g["file"]
+            if not f.exists():
+                continue
+            base = _re.sub(r"[^\w\-. ]+", "", (g.get("voice_name") or "voice"))[:40].strip() or "voice"
+            name = f"{base} - {g['id'][:6]}{f.suffix}"
+            k = 2
+            while name in used:
+                name = f"{base} - {g['id'][:6]}_{k}{f.suffix}"
+                k += 1
+            used.add(name)
+            z.write(f, name)
+    buf.seek(0)
+    fname = f"heyvoice-batch-{batch_id[:8] or 'export'}.zip"
+    return StreamingResponse(buf, media_type="application/zip",
+                             headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 @router.patch("/generations/{gid}")

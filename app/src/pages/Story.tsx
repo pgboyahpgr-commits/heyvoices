@@ -1,0 +1,324 @@
+// Story mode — multi-speaker scripts rendered into one stitched track.
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArrowDown, ArrowUp, BookOpen, Copy, Loader2, Play, Plus, Search,
+  Sparkles, Trash2, Wand2, X,
+} from 'lucide-react'
+import clsx from 'clsx'
+import { useApp } from '../lib/store'
+import type { StoryLine } from '../lib/types'
+import VoiceSelect from '../components/VoiceSelect'
+import { Avatar, fmtDuration } from '../components/ui'
+
+const PAUSE_OPTIONS = [0, 200, 400, 800, 1500]
+const CHARS_PER_SEC = 14
+
+let lineCounter = 0
+const newLine = (voiceId = ''): StoryLine => ({
+  id: `l${++lineCounter}`,
+  voiceId,
+  text: '',
+  pauseAfterMs: 400,
+})
+
+const STARTERS: { name: string; texts: string[] }[] = [
+  {
+    name: 'Dialogue scene',
+    texts: [
+      'We need to go. Now.',
+      "Not until we find her. I'm not leaving without her.",
+      'Then we go together.',
+    ],
+  },
+  {
+    name: 'Audiobook opening',
+    texts: [
+      'Chapter one. The lighthouse had been dark for three nights, and the village below pretended not to notice.',
+      'But Mara noticed. She had counted every dark hour, the way other people counted sheep.',
+    ],
+  },
+  {
+    name: 'Podcast cold open',
+    texts: [
+      'Welcome back to the show. Today we are doing something a little different.',
+      'Everything you are about to hear was generated locally, on one laptop, with open models only.',
+    ],
+  },
+]
+
+export default function Story() {
+  const voices = useApp((s) => s.voices)
+  const lines = useApp((s) => s.storyLines)
+  const setLines = useApp((s) => s.setStoryLines)
+  const renderStory = useApp((s) => s.renderStory)
+  const generate = useApp((s) => s.generate)
+  const job = useApp((s) => s.job)
+  const toast = useApp((s) => s.toast)
+  const [format, setFormat] = useState('wav')
+  const [castQuery, setCastQuery] = useState('')
+
+  const busy = !!job && (job.status === 'queued' || job.status === 'running')
+  const activeCount = lines.filter((l) => l.text.trim()).length
+  const chars = lines.reduce((n, l) => n + l.text.trim().length, 0)
+  const estSec = chars / CHARS_PER_SEC
+
+  // prefill with two starter lines the first time the page is opened
+  useEffect(() => {
+    if (lines.length === 0 && voices.length > 0) {
+      const picks = voices.filter((v) => v.kind !== 'preset').concat(voices)
+      const a = picks[0]?.id ?? ''
+      const b = picks[1]?.id ?? a
+      setLines([{ ...newLine(a) }, { ...newLine(b) }])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voices.length])
+
+  const cast = useMemo(() => {
+    const q = castQuery.toLowerCase()
+    const sorted = [...voices].sort((a, b) => {
+      const ak = a.kind === 'preset' ? 1 : 0
+      const bk = b.kind === 'preset' ? 1 : 0
+      return ak - bk || a.name.localeCompare(b.name)
+    })
+    return q ? sorted.filter((v) => v.name.toLowerCase().includes(q)) : sorted
+  }, [voices, castQuery])
+
+  const patch = (id: string, p: Partial<StoryLine>) =>
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...p } : l)))
+
+  const move = (index: number, dir: -1 | 1) =>
+    setLines((prev) => {
+      const next = [...prev]
+      const target = index + dir
+      if (target < 0 || target >= next.length) return prev
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+
+  const addLine = (voiceId = '') => {
+    const last = lines[lines.length - 1]
+    setLines((prev) => [...prev, newLine(voiceId || last?.voiceId || voices[0]?.id || '')])
+  }
+
+  const useStarter = (texts: string[]) => {
+    const picks = voices.filter((v) => v.kind !== 'preset').concat(voices)
+    setLines(texts.map((t, i) => ({ ...newLine(picks[i % Math.max(1, picks.length)]?.id ?? ''), text: t })))
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* header */}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="flex items-center gap-2 text-[22px] font-bold tracking-[-0.02em]">
+            <BookOpen size={20} className="text-accent-soft" /> Story
+          </h1>
+          <p className="mt-0.5 text-[12.5px] text-fg-muted">
+            Multi-speaker scripts — every line its own voice and pacing, rendered into one stitched track.
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="hidden text-[11.5px] tabular-nums text-fg-dim xl:block">
+            {activeCount} line{activeCount === 1 ? '' : 's'} · {chars} chars · ~{fmtDuration(estSec)}
+          </span>
+          <select className="select !w-auto" value={format} onChange={(e) => setFormat(e.target.value)} title="Output format">
+            {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
+          </select>
+          <button
+            className="btn btn-primary"
+            disabled={busy || activeCount === 0}
+            onClick={() => renderStory({ format })}
+          >
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {busy ? `${Math.round((job?.progress ?? 0) * 100)}%` : 'Render story'}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+        {/* cast rail */}
+        <div className="panel flex h-fit flex-col p-3 xl:sticky xl:top-0">
+          <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-fg-dim">Cast</div>
+          <div className="relative mb-2">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-dim" />
+            <input
+              className="input !py-1.5 !pl-8 !text-[12.5px]"
+              placeholder="Find a voice…"
+              value={castQuery}
+              onChange={(e) => setCastQuery(e.target.value)}
+            />
+          </div>
+          <div className="max-h-[46vh] overflow-y-auto pr-0.5">
+            {cast.map((v) => (
+              <button
+                key={v.id}
+                className="group flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.05]"
+                onClick={() => addLine(v.id)}
+                title={`Add a line with ${v.name}`}
+              >
+                <Avatar voice={v} size={26} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[12px] font-medium">{v.name}</div>
+                  <div className="truncate text-[10px] text-fg-dim">{v.kind === 'preset' ? 'Preset' : 'Cloned'}</div>
+                </div>
+                <Plus size={13} className="shrink-0 text-fg-dim opacity-0 transition-opacity group-hover:opacity-100" />
+              </button>
+            ))}
+            {cast.length === 0 && <div className="px-2 py-4 text-center text-[11.5px] text-fg-dim">No voices yet — clone one first.</div>}
+          </div>
+          <div className="mt-2 border-t border-line px-1 pt-2 text-[10.5px] leading-relaxed text-fg-dim">
+            Click a voice to append a line. Reorder with the arrows, fine-tune delivery per line.
+          </div>
+        </div>
+
+        {/* script */}
+        <div className="flex flex-col gap-2.5">
+          {lines.map((line, i) => (
+            <StoryLineCard
+              key={line.id}
+              line={line}
+              index={i}
+              total={lines.length}
+              patch={patch}
+              move={move}
+              onDelete={() => setLines((prev) => prev.filter((l) => l.id !== line.id))}
+              onDuplicate={() => setLines((prev) => [...prev.slice(0, i + 1), { ...line, id: `l${++lineCounter}` }, ...prev.slice(i + 1)])}
+              onPlay={() => {
+                if (!line.text.trim() || !line.voiceId) { toast('error', 'Line needs text and a voice'); return }
+                generate({ text: line.text, voiceId: line.voiceId })
+              }}
+            />
+          ))}
+
+          {lines.length === 0 && (
+            <div className="panel flex flex-col items-center gap-3 py-12 text-center">
+              <BookOpen size={26} className="text-fg-dim" />
+              <div className="text-[13.5px] font-medium text-fg-muted">A blank page — pick a voice to start a line</div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {STARTERS.map((s) => (
+                  <button key={s.name} className="chip" onClick={() => useStarter(s.texts)}>
+                    <Wand2 size={11} /> {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button className="btn" onClick={() => addLine()}>
+              <Plus size={14} /> Add line
+            </button>
+            {lines.length > 0 && (
+              <>
+                <button className="btn btn-ghost" onClick={() => useStarter(STARTERS[0].texts)}>
+                  <Wand2 size={13} /> Dialogue template
+                </button>
+                <button className="btn btn-ghost" onClick={() => setLines([])}>
+                  <X size={14} /> Clear script
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------ line card
+function StoryLineCard({
+  line, index, total, patch, move, onDelete, onDuplicate, onPlay,
+}: {
+  line: StoryLine
+  index: number
+  total: number
+  patch: (id: string, p: Partial<StoryLine>) => void
+  move: (index: number, dir: -1 | 1) => void
+  onDelete: () => void
+  onDuplicate: () => void
+  onPlay: () => void
+}) {
+  const voices = useApp((s) => s.voices)
+  const [tune, setTune] = useState(false)
+  const ref = useRef<HTMLTextAreaElement | null>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(240, Math.max(46, el.scrollHeight))}px`
+  }, [line.text])
+
+  const voice = voices.find((v) => v.id === line.voiceId)
+
+  return (
+    <div className="panel group/line p-3.5 transition-colors focus-within:!border-accent/40">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="w-6 shrink-0 text-center text-[11px] font-semibold tabular-nums text-fg-dim">{index + 1}</span>
+        <VoiceSelect voices={voices} value={line.voiceId || null} onSelect={(v) => patch(line.id, { voiceId: v.id })} compact />
+        {voice?.kind === 'preset' && <span className="badge !text-[9px]">{voice.engine === 'kokoro' ? 'Kokoro' : 'Preset'}</span>}
+        <div className="flex-1" />
+        <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/line:opacity-100 focus-within:opacity-100">
+          <button
+            className={clsx('icon-btn !h-7 !w-7', tune && 'text-accent-soft')}
+            title="Per-line delivery instruction"
+            onClick={() => setTune(!tune)}
+          >
+            <Wand2 size={13} />
+          </button>
+          <button className="icon-btn !h-7 !w-7" title="Play this line" onClick={onPlay}>
+            <Play size={13} />
+          </button>
+          <button className="icon-btn !h-7 !w-7" title="Move up" disabled={index === 0} onClick={() => move(index, -1)}>
+            <ArrowUp size={13} />
+          </button>
+          <button className="icon-btn !h-7 !w-7" title="Move down" disabled={index === total - 1} onClick={() => move(index, 1)}>
+            <ArrowDown size={13} />
+          </button>
+          <button className="icon-btn !h-7 !w-7" title="Duplicate" onClick={onDuplicate}>
+            <Copy size={13} />
+          </button>
+          <button className="icon-btn !h-7 !w-7 hover:!text-danger" title="Delete line" onClick={onDelete}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      <textarea
+        ref={ref}
+        rows={2}
+        className="textarea !text-[12.5px]"
+        placeholder="Line of dialogue…"
+        value={line.text}
+        onChange={(e) => patch(line.id, { text: e.target.value })}
+      />
+
+      {tune && (
+        <input
+          className="input mt-2 !py-1.5 !text-[12px]"
+          placeholder='Delivery for this line, e.g. "whispering, scared" (Qwen presets / designed voices)'
+          value={line.instruct || ''}
+          onChange={(e) => patch(line.id, { instruct: e.target.value })}
+        />
+      )}
+
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className="text-[10.5px] text-fg-dim">Pause after</span>
+        {PAUSE_OPTIONS.map((ms) => (
+          <button
+            key={ms}
+            className={clsx('chip !px-2 !py-0.5 !text-[10.5px]',
+              line.pauseAfterMs === ms && '!border-accent/60 !bg-accent/10 !text-accent-soft')}
+            onClick={() => patch(line.id, { pauseAfterMs: ms })}
+          >
+            {ms === 0 ? 'none' : ms >= 1000 ? `${ms / 1000}s` : `${ms}ms`}
+          </button>
+        ))}
+        <div className="flex-1" />
+        <span className="text-[10.5px] tabular-nums text-fg-dim">
+          ~{fmtDuration(line.text.trim().length / CHARS_PER_SEC)}
+        </span>
+      </div>
+    </div>
+  )
+}

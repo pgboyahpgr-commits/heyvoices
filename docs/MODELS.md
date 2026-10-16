@@ -61,6 +61,20 @@ with Qwen3-TTS 0.6B Base and an ~8 s reference clip:
 
 Run the script yourself after setup to compare on your hardware.
 
+**All engines verified working** (full UI + API pass, 2026-10-17):
+
+| Engine / flow | Verified | Cold timing (includes model load) |
+|---|---|---|
+| Qwen3-TTS 0.6B Base — cloned voice | ✅ | 7.4 s speech in ~23 s first run, ~10 s warm |
+| Story mode — 2 voices stitched, per-line pauses | ✅ | 6.6 s track in ~12 s warm (0.6B Base) |
+| Kokoro 82M — preset voice on CPU | ✅ | 4.4 s speech in ~18 s first run, then ~1–2 s |
+| Chatterbox Multilingual — clone + `[laugh]` tags | ✅ | 6.4 s speech in ~22 s first run |
+| Qwen3-TTS 1.7B VoiceDesign — description → voice | ✅ | 5.9 s speech in ~26 s first run, saved as a new voice |
+
+**Disk notes:** HuggingFace repos carry more than the runtime weights — `ResembleAI/chatterbox`
+pulls ~16 GB (all variants + dev artifacts) and VoiceDesign ~9 GB on disk. Disk is only needed
+once; the catalog's `size_gb` reflects the runtime footprint, not the repo size.
+
 ## Quality tips (this is 80% of clone quality)
 
 1. **Reference audio: 10–30 s of clean, single-speaker speech, no music, no reverb.**

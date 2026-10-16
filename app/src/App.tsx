@@ -2,9 +2,11 @@ import { useEffect } from 'react'
 import { AudioLines, Loader2 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Player from './components/Player'
+import CommandPalette from './components/CommandPalette'
 import { Toasts } from './components/ui'
 import { useApp } from './lib/store'
 import Studio from './pages/Studio'
+import Story from './pages/Story'
 import Voices from './pages/Voices'
 import Batch from './pages/Batch'
 import Models from './pages/Models'
@@ -55,6 +57,7 @@ export default function App() {
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1120px] px-8 py-7">
             {page === 'studio' && <Studio />}
+            {page === 'story' && <Story />}
             {page === 'voices' && <Voices />}
             {page === 'batch' && <Batch />}
             {page === 'models' && <Models />}
@@ -66,6 +69,7 @@ export default function App() {
         {job && job.status !== 'done' && job.status !== 'error' && <MiniJobBar />}
       </div>
       <Toasts />
+      <CommandPalette />
     </div>
   )
 }
