@@ -173,18 +173,20 @@ def apply_effects(audio: np.ndarray, sr: int, fx: dict) -> np.ndarray:
         return audio
 
 
-def trim_silence(audio: np.ndarray, sr: int, thresh_db: float = -45.0, pad_ms: int = 40) -> np.ndarray:
+def trim_silence(audio: np.ndarray, sr: int, thresh_db: float = -45.0, pad_ms: float = 40.0,
+                 return_offset: bool = False):
     if audio.size == 0:
-        return audio
+        return (audio, 0) if return_offset else audio
     thresh = 10 ** (thresh_db / 20.0)
     env = np.abs(audio)
     idx = np.where(env > thresh)[0]
     if idx.size == 0:
-        return audio
+        return (audio, 0) if return_offset else audio
     pad = int(sr * pad_ms / 1000.0)
     start = max(0, idx[0] - pad)
     end = min(len(audio), idx[-1] + pad)
-    return audio[start:end]
+    out = audio[start:end]
+    return (out, start) if return_offset else out
 
 
 def compute_peaks(audio: np.ndarray, buckets: int = 96) -> list[float]:

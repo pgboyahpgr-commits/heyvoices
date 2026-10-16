@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 
@@ -29,10 +29,10 @@ class GenRequest:
     seed: Optional[int] = None
     temperature: Optional[float] = None
     # voice reference (engine-specific, prepared by resolve logic below)
-    ref_audio: Optional[str] = None      # path to a prepared 24k wav sample
-    ref_text: Optional[str] = None
+    ref_audio: Optional[Union[str, list[str]]] = None   # prepared 24k wav sample path(s)
+    ref_text: Optional[Union[str, list[Optional[str]]]] = None
     x_vector_only: bool = False
-    voice_key: str = ""                  # cache key (voice id)
+    voice_key: str = ""                  # cache key (voice id + ref set)
 
 
 class EngineBase:

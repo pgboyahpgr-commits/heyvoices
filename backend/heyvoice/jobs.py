@@ -73,6 +73,9 @@ def _worker() -> None:
         except Exception as exc:  # noqa: BLE001
             job.status = "error"
             job.error = str(exc)
+            import traceback as _tb
+
+            print(f"[jobs] {job.type} {job.id} failed: {exc}\n{_tb.format_exc()}", flush=True)
         finally:
             job.done.set()
             events.emit("job", job.to_dict())
@@ -166,19 +169,34 @@ def _apply_pronunciations(text: str, settings: dict) -> str:
     return text
 
 
-def _voice_ref(voice: dict | None) -> tuple[str, str | None, str | None, str]:
-    """(speaker, ref_audio, ref_text, voice_key) for a store voice."""
+def _voice_ref(voice: dict | None) -> tuple[str, list[str] | None, list[str | None] | None, str]:
+    """(speaker, ref_audios, ref_texts, voice_key) for a store voice.
+
+    Multi-sample cloning: up to 3 reference clips (max 90 s combined) are used —
+    Qwen3-TTS conditions on all of them, which sharpens the timbre match.
+    """
     if not voice:
         return "", None, None, ""
     meta = voice.get("meta") or {}
     speaker = meta.get("speaker", "")
-    voice_key = voice["id"]
-    ref_audio = ref_text = None
+    ref_audios: list[str] = []
+    ref_texts: list[str | None] = []
     if voice.get("samples") and not speaker:
-        sample = voice["samples"][0]
-        ref_audio = str(VOICES_DIR / voice["id"] / sample["file"])
-        ref_text = sample.get("transcript") or None
-    return speaker, ref_audio, ref_text, voice_key
+        budget = 90.0
+        for sample in voice["samples"][:3]:
+            dur = float(sample.get("duration") or 0.0)
+            if ref_audios and dur and budget - dur < 5.0:
+                break  # keep total reference length sane
+            path = VOICES_DIR / voice["id"] / sample["file"]
+            if not path.exists():
+                continue
+            ref_audios.append(str(path))
+            ref_texts.append((sample.get("transcript") or "").strip() or None)
+            budget -= dur or 0.0
+    if not ref_audios:
+        return speaker, None, None, voice["id"]
+    key = voice["id"] if len(ref_audios) == 1 else f"{voice['id']}#{len(ref_audios)}"
+    return speaker, ref_audios, ref_texts, key
 
 
 def h_generate(job: Job, p: dict) -> None:
@@ -268,6 +286,7 @@ def h_story(job: Job, p: dict) -> None:
     parts = []
     pauses: list[int] = []
     segments: list[dict] = []
+    spans: list[tuple[int, int]] = []   # (first, last) part index per line
     sr = 24000
     prev_pause_after = 0
     total = len(lines)
@@ -286,6 +305,7 @@ def h_story(job: Job, p: dict) -> None:
         chunks = chunk_text(text, int(settings["chunk_max_chars"]))
         line_seconds = 0.0
         line_parts = 0
+        first_part = len(parts)
         for ci, ch in enumerate(chunks):
             req = GenRequest(
                 text=ch["text"], language=language,
@@ -306,6 +326,7 @@ def h_story(job: Job, p: dict) -> None:
             line_parts += 1
         prev_pause_after = int(line.get("pause_after_ms") or 400)
         if line_parts:
+            spans.append((first_part, len(parts) - 1))
             segments.append({
                 "voice_id": (voice or {}).get("id", ""),
                 "voice_name": (voice or {}).get("name", "Voice"),
@@ -318,8 +339,33 @@ def h_story(job: Job, p: dict) -> None:
         raise RuntimeError("Engines returned no audio for this story")
 
     job.set_progress(0.88, "stitching")
+    # exact per-line timeline (mirrors stitch(): pauses add, crossfades overlap)
+    fade_s = int(settings["crossfade_ms"]) / 1000.0
+    starts: list[float] = []
+    accum = 0.0
+    for i, part in enumerate(parts):
+        if i == 0:
+            start = 0.0
+        else:
+            pause = (pauses[i - 1] if i - 1 < len(pauses) else 0) or 0
+            if pause > 0:
+                start = accum + pause / 1000.0
+            elif fade_s > 0 and accum >= fade_s and len(part) >= int(fade_s * sr):
+                start = accum - fade_s
+            else:
+                start = accum
+        starts.append(start)
+        accum = start + len(part) / sr
+
     full = stitch(parts, sr, int(settings["crossfade_ms"]), pauses)
-    full = trim_silence(full, sr)
+    full, trim_off = trim_silence(full, sr, return_offset=True)
+    trim_shift = trim_off / sr
+    total_s = len(full) / sr
+    line_timings = []
+    for (a, b), seg in zip(spans, segments):
+        seg_start = max(0.0, starts[a] - trim_shift)
+        seg_end = min(max(seg_start + 0.05, starts[b] + len(parts[b]) / sr - trim_shift), total_s)
+        line_timings.append({**seg, "start": round(seg_start, 3), "end": round(seg_end, 3)})
 
     fx = p.get("effects") or {}
     if fx:
@@ -352,7 +398,7 @@ def h_story(job: Job, p: dict) -> None:
         text="\n".join(s["text"] for s in segments),
         engine="multi", model="story", language=p.get("language") or "auto",
         params={"story": True, "lines": lines, "segments": segments,
-                "effects": fx, "format": fmt},
+                "line_timings": line_timings, "effects": fx, "format": fmt},
         file=final.name, duration=duration_of(master), peaks=compute_peaks(full),
         batch_id=p.get("batch_id", ""),
     )

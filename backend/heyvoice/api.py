@@ -4,13 +4,14 @@ from __future__ import annotations
 import asyncio
 import json
 import shutil
+import subprocess
 import threading
 import time
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
 from . import events, jobs, store
@@ -416,10 +417,136 @@ def generations_export(batch_id: str) -> StreamingResponse:
                 k += 1
             used.add(name)
             z.write(f, name)
+            if (g.get("text") or "").strip():
+                srt = _srt_text(g)
+                if srt:
+                    z.writestr(name.rsplit(".", 1)[0] + ".srt", srt)
     buf.seek(0)
     fname = f"heyvoice-batch-{batch_id[:8] or 'export'}.zip"
     return StreamingResponse(buf, media_type="application/zip",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+def _srt_time(t: float) -> str:
+    ms = max(0, int(round(t * 1000)))
+    h, ms = divmod(ms, 3_600_000)
+    m, ms = divmod(ms, 60_000)
+    s, ms = divmod(ms, 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def _srt_cues(gen: dict) -> list[tuple[float, float, str]]:
+    """Exact cues for stories (line_timings), approximate sentence split otherwise."""
+    params = gen.get("params") or {}
+    timings = params.get("line_timings") or []
+    if timings:
+        return [(float(t.get("start", 0)), float(t.get("end", 0)), (t.get("text") or "").strip())
+                for t in timings if (t.get("text") or "").strip()]
+    text = (gen.get("text") or "").strip()
+    duration = float(gen.get("duration") or 0)
+    if not text or duration <= 0:
+        return []
+    import re as _re
+
+    pieces: list[str] = []
+    for p in _re.split(r"(?<=[.!?…])\s+", text):
+        p = p.strip()
+        while len(p) > 84:
+            cut = p.rfind(",", 0, 84)
+            if cut < 30:
+                cut = p.rfind(" ", 0, 84)
+            if cut < 30:
+                cut = 84
+            pieces.append(p[:cut + 1].strip())
+            p = p[cut + 1:].strip()
+        if p:
+            pieces.append(p)
+    total = sum(len(x) for x in pieces) or 1
+    cues, t = [], 0.0
+    for x in pieces:
+        d = duration * len(x) / total
+        cues.append((t, min(duration, t + d), x))
+        t += d
+    return cues
+
+
+def _srt_text(gen: dict) -> str:
+    blocks = []
+    for i, (a, b, txt) in enumerate(_srt_cues(gen), 1):
+        blocks.append(f"{i}\n{_srt_time(a)} --> {_srt_time(b)}\n{txt}\n")
+    return "\n".join(blocks)
+
+
+@router.get("/generations/{gid}/srt")
+def generation_srt(gid: str):
+    gen = store.get_generation(gid)
+    if not gen:
+        raise HTTPException(404, "Generation not found")
+    body = _srt_text(gen)
+    if not body:
+        raise HTTPException(400, "Nothing to subtitle in this take")
+    return PlainTextResponse(body, headers={
+        "Content-Disposition": f'attachment; filename="heyvoice-{gid}.srt"'})
+
+
+def _meta_escape(s: str) -> str:
+    return (s.replace("\\", "\\\\").replace("=", "\\=").replace(";", "\\;")
+             .replace("#", "\\#").replace("\n", " ").strip())
+
+
+@router.get("/generations/{gid}/chapter")
+def generation_chapter(gid: str, fmt: str = "m4b", title: str = "", artist: str = "",
+                       album: str = "HeyVoice", track: int = 0):
+    """Audiobook-ready export: 44.1 kHz with metadata tags and chapter marks.
+
+    fmt=m4b → AAC audiobook with native chapters; fmt=mp3 → ID3v2 with CHAP frames.
+    Story takes get one chapter per spoken line; everything else one chapter.
+    """
+    gen = store.get_generation(gid)
+    if not gen:
+        raise HTTPException(404, "Generation not found")
+    fmt = (fmt or "m4b").lower()
+    if fmt not in ("m4b", "mp3"):
+        raise HTTPException(400, "fmt must be m4b or mp3")
+    src = OUTPUTS_DIR / f"{gid}.wav"
+    if not src.exists():
+        src = OUTPUTS_DIR / (gen.get("file") or "")
+    if not src.exists():
+        raise HTTPException(404, "Audio file not found")
+    duration = float(gen.get("duration") or 0)
+    t_title = (title.strip() or (gen.get("text") or "").strip()[:60]
+               or gen.get("voice_name") or "HeyVoice").replace("\n", " ").strip()
+    t_artist = artist.strip() or gen.get("voice_name") or "HeyVoice"
+    timings = (gen.get("params") or {}).get("line_timings") or []
+    chapters = timings or [{"text": "Chapter 1", "start": 0.0, "end": max(duration, 0.1)}]
+    meta = [";FFMETADATA1",
+            f"title={_meta_escape(t_title)}",
+            f"artist={_meta_escape(t_artist)}",
+            f"album={_meta_escape(album or 'HeyVoice')}"]
+    if track:
+        meta.append(f"track={int(track)}")
+    for ch in chapters:
+        ch_start = max(0.0, float(ch.get("start", 0)))
+        ch_end = max(ch_start + 0.5, float(ch.get("end") or duration))
+        meta += ["[CHAPTER]", "TIMEBASE=1/1000",
+                 f"START={int(ch_start * 1000)}", f"END={int(ch_end * 1000)}",
+                 f"title={_meta_escape(ch.get('text') or t_title)}"]
+    meta_path = OUTPUTS_DIR / f"{gid}_chapter_meta.txt"
+    meta_path.write_text("\n".join(meta) + "\n", encoding="utf-8")
+    dst = OUTPUTS_DIR / f"{gid}_chapter.{fmt}"
+    codec = (["-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"] if fmt == "m4b"
+             else ["-c:a", "libmp3lame", "-qscale:a", "2", "-id3v2_version", "3"])
+    try:
+        subprocess.run(["ffmpeg", "-y", "-i", str(src), "-i", str(meta_path),
+                        "-map", "0:a", "-map_metadata", "1", "-ar", "44100", *codec, str(dst)],
+                       check=True, capture_output=True)
+    except subprocess.CalledProcessError as exc:
+        raise HTTPException(500, f"ffmpeg failed: {(exc.stderr or b'')[-300:].decode(errors='replace')}")
+    finally:
+        meta_path.unlink(missing_ok=True)
+    safe_name = "".join(c for c in t_title if c.isalnum() or c in " -_")[:40].strip() or gid
+    return FileResponse(dst, media_type=("audio/mp4" if fmt == "m4b" else "audio/mpeg"),
+                        filename=f"{safe_name}.{fmt}")
 
 
 @router.patch("/generations/{gid}")

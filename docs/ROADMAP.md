@@ -18,7 +18,9 @@
 - [x] Full app loop verified: clone → generate in UI → SSE progress → take list → player
 
 ## Phase 1 — Engine core hardening
-- [ ] Multi-sample cloning (average/select the best prompt)
+- [x] Multi-sample cloning: 1–3 clips per voice merge into **one** clone prompt — ICL code streams
+      concatenated, transcripts joined, speaker embeddings averaged (Qwen3-TTS); verified with a
+      2-clip voice producing clean takes
 - [x] Clone from audio **or video** clips: FFmpeg extracts the audio track (mp4/mov/mkv/webm/avi…),
       edge silence trimmed, loudness-normalized, capped at 60 s; reference is auditionable in the
       wizard (`/files/uploads`) before creating the voice
@@ -36,12 +38,16 @@
       always-visible take replay, ambient dark theme, page transitions
 - [x] UI 3.0 polish: professional graphite + indigo palette (no neon glows), custom SVG brand mark
       (app icon + favicon + animated splash), SVG empty-state illustrations, softer shadows/rings
-- [ ] Audiobook export: chapter splitting, 44.1 kHz re-render, ID3 tags
+- [x] Audiobook & subtitle export: per-take **.srt** (exact per-line timings for Story renders,
+      sentence-weighted approximation otherwise; batch ZIPs include each take's .srt), 44.1 kHz
+      **.m4b** with per-line chapter marks + tags, and 44.1 kHz **.mp3** with ID3v2 tags — all in
+      the player dock's export menu
 - [ ] Text expansion: numbers/dates/units (SSML-lite)
 - [ ] Batch v2 (rest): per-row settings, retries, folder-per-character naming schemes
 
 ## Phase 3 — Integrations
-- [ ] MCP server (Claude/agents can call `speak` as a tool)
+- [x] MCP server (Claude/agents can call `speak` as a tool) — stdio server over the local REST
+      API, 7 tools, verified end-to-end with the official SDK client (docs/MCP.md)
 - [ ] Global-hotkey dictation (Whisper + OS-wide paste)
 - [ ] Webhooks on generation completion for pipelines (Streamer.bot, OBS)
 
@@ -59,5 +65,4 @@
 ## Ideas backlog
 - Voice "blending" (interpolate two clone prompts)
 - Take comparison A/B player
-- Automatic subtitle (SRT) export per generation
 - Discord/Twitch read-aloud bridge

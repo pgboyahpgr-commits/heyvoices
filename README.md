@@ -26,7 +26,8 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
 
 - **Voice cloning** — drop 5–30 s of clean speech **as audio or video** (mp4/mov/mkv/webm — the
   audio track is extracted with FFmpeg, silence-trimmed and normalized); Whisper auto-transcribes
-  it and Qwen3-TTS or Chatterbox clones the timbre. Reusable forever, no per-use cost.
+  it and Qwen3-TTS or Chatterbox clones the timbre. Add up to three clips of the same speaker and
+  they are blended into one clone prompt for a sharper match. Reusable forever, no per-use cost.
 - **Voice design** — describe a voice in words ("calm middle-aged male, slightly husky") and
   generate it, then save the result as a clonable voice.
 - **Story mode** — write multi-speaker scripts: every line gets its own voice, pause length and
@@ -43,7 +44,9 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   ("HeyVoice" → "Hey Voice") applied to every generation.
 - **Effects** — gain, pitch shift, reverb, compressor (via Pedalboard), applied before export.
 - **Batch** — CSV in (`Voice Name,Text` per line), named audio files out, one-click **ZIP export**
-  for the whole batch — perfect for game lines.
+  for the whole batch — perfect for game lines. Finished renders export as **44.1 kHz MP3 with
+  ID3 tags**, or as an audiobook **.m4b with per-line chapter marks**, or SubRip **.srt** subtitles
+  (exact timings for Story renders) from the player dock.
 - **Player dock** — waveform scrubbing, playback speed (1× / 1.25× / 1.5× / 0.75×), loop, star,
   re-roll with a new seed, download.
 - **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
@@ -53,7 +56,8 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   graphite + indigo theme, a hand-built SVG brand mark (sidebar, splash, favicon, app icon), and
   custom SVG empty-state illustrations — no icon fonts or raster assets.
 - **Local API** — REST + SSE for apps, agents, and stream tooling. `POST /speak` is a one-call
-  text-to-audio endpoint.
+  text-to-audio endpoint. A built-in **MCP server** lets Claude and other agents call
+  `speak`/`list_voices` directly — see [docs/MCP.md](docs/MCP.md).
 - **8 GB VRAM friendly** — one model resident at a time, automatic LRU unloading, bf16, SDPA
   attention (no flash-attn required).
 
@@ -104,6 +108,7 @@ data/                  # voices, outputs, SQLite db (gitignored)
 - [Architecture](docs/ARCHITECTURE.md) — how the pieces fit together
 - [Models](docs/MODELS.md) — catalog, licenses, VRAM budget, quality tips
 - [API](docs/API.md) — REST reference and integration examples
+- [MCP](docs/MCP.md) — use HeyVoice as agent tools (Claude, Cursor, SDK agents)
 - [Roadmap](docs/ROADMAP.md) — phases and status
 
 ## Licensing

@@ -93,15 +93,42 @@ class Qwen3TTSEngine(EngineBase):
             self._prompt_cache.clear()
 
     # ---- clone prompt management ------------------------------------
-    def get_clone_prompt(self, voice_key: str, ref_audio: str, ref_text: str | None):
+    def get_clone_prompt(self, voice_key: str, ref_audio, ref_text):
+        """Build (and cache) a clone prompt from 1..N reference clips.
+
+        Qwen3-TTS consumes one prompt item per *generation*, so when several
+        reference clips are supplied they are merged into a single item:
+        ICL code streams are concatenated (transcripts joined in order) and
+        speaker embeddings are averaged — conditioning on all clips at once.
+        """
         cached = self._prompt_cache.get(voice_key)
         if cached is not None:
             return cached
-        prompt = self.model.create_voice_clone_prompt(
-            ref_audio=ref_audio,
-            ref_text=(ref_text or None),
-            x_vector_only_mode=not bool(ref_text),
-        )
+        audios = ref_audio if isinstance(ref_audio, list) else [ref_audio]
+        texts = ref_text if isinstance(ref_text, list) else [ref_text]
+        texts = [(t or None) for t in (list(texts) + [None] * len(audios))[:len(audios)]]
+        xvec = [not bool(t) for t in texts]
+        if len(audios) == 1:
+            prompt = self.model.create_voice_clone_prompt(
+                ref_audio=audios[0], ref_text=texts[0], x_vector_only_mode=xvec[0])
+        else:
+            import torch
+            from qwen_tts.inference.qwen3_tts_model import VoiceClonePromptItem
+
+            items = self.model.create_voice_clone_prompt(
+                ref_audio=audios, ref_text=texts, x_vector_only_mode=xvec)
+            icl = [it for it in items if it.ref_code is not None]
+            prompt = [VoiceClonePromptItem(
+                ref_code=(torch.cat([it.ref_code for it in icl], dim=0) if icl else None),
+                ref_spk_embedding=torch.stack([it.ref_spk_embedding for it in items]).mean(dim=0),
+                x_vector_only_mode=not icl,
+                icl_mode=bool(icl),
+                ref_text=(" ".join((it.ref_text or "").strip() for it in icl).strip() or None)
+                if icl else None,
+            )]
+        print(f"[qwen3tts] clone prompt: {len(audios)} ref(s), "
+              f"{sum(1 for t in texts if t)} transcript(s) -> {len(prompt)} item(s) key={voice_key}",
+              flush=True)
         self._prompt_cache[voice_key] = prompt
         return prompt
 

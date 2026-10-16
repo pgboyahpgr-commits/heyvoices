@@ -20,3 +20,5 @@ qwen-tts
 kokoro>=0.9.4
 misaki[en]>=0.8
 loguru
+# MCP server (agents can call speak/list_voices/... as tools) — see docs/MCP.md
+mcp>=2.0

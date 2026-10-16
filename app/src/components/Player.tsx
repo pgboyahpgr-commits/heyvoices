@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import {
-  Download, Pause, Play, RefreshCcw, Repeat, Star, Trash2, X,
+  BookOpen, Download, FileText, Music, Pause, Play, RefreshCcw, Repeat, Star, Trash2, X,
 } from 'lucide-react'
 import clsx from 'clsx'
-import { fileUrl } from '../lib/api'
+import { BASE, fileUrl } from '../lib/api'
 import { useApp } from '../lib/store'
 import { engineLabel, fmtDuration } from './ui'
 
@@ -27,6 +27,7 @@ export default function Player() {
   const [dur, setDur] = useState(0)
   const [rate, setRate] = useState(1)
   const [loop, setLoop] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   useEffect(() => {
     if (!gen || !containerRef.current) return
@@ -77,6 +78,11 @@ export default function Player() {
   if (!gen) return null
 
   const voiceColor = voices.find((v) => v.id === gen.voice_id)?.color
+  const cleanTitle = gen.text.replace(/\s+/g, ' ').trim().slice(0, 60) || gen.voice_name
+  const chapterUrl = (fmt: 'm4b' | 'mp3') =>
+    `${BASE}/generations/${gen.id}/chapter?fmt=${fmt}` +
+    `&title=${encodeURIComponent(cleanTitle)}` +
+    `&artist=${encodeURIComponent(gen.voice_name)}`
 
   return (
     <div className="animate-in relative border-t border-line px-5 py-3.5 backdrop-blur" style={{ background: 'linear-gradient(180deg, rgba(22,22,28,.78), rgba(12,12,16,.97))' }}>
@@ -134,9 +140,39 @@ export default function Player() {
           <button className="icon-btn" title="New take (regenerate)" onClick={() => regenerate(gen.id)}>
             <RefreshCcw size={15} />
           </button>
-          <a className="icon-btn" title="Download" href={fileUrl(gen.file)} download={gen.file}>
-            <Download size={15} />
-          </a>
+          <div className="relative">
+            <button
+              className={clsx('icon-btn', exportOpen && '!bg-white/[0.08] !text-fg')}
+              title="Export — audio, subtitles, audiobook"
+              onClick={() => setExportOpen(!exportOpen)}
+            >
+              <Download size={15} />
+            </button>
+            {exportOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
+                <div className="popover animate-pop absolute bottom-full right-0 z-50 mb-2 w-[236px] p-1.5">
+                  <a className="menu-row" href={fileUrl(gen.file)} download={gen.file}
+                     onClick={() => setExportOpen(false)}>
+                    <Download size={13} /> Download audio <span className="ml-auto text-[10px] text-fg-dim">.{gen.file.split('.').pop()}</span>
+                  </a>
+                  <a className="menu-row" href={`${BASE}/generations/${gen.id}/srt`}
+                     onClick={() => setExportOpen(false)}>
+                    <FileText size={13} /> Subtitles (.srt)
+                    {gen.params?.story && <span className="ml-auto text-[10px] text-fg-dim">per line</span>}
+                  </a>
+                  <a className="menu-row" href={chapterUrl('m4b')} onClick={() => setExportOpen(false)}>
+                    <BookOpen size={13} /> Audiobook chapter (.m4b)
+                    <span className="ml-auto text-[10px] text-fg-dim">44.1k</span>
+                  </a>
+                  <a className="menu-row" href={chapterUrl('mp3')} onClick={() => setExportOpen(false)}>
+                    <Music size={13} /> MP3 + tags
+                    <span className="ml-auto text-[10px] text-fg-dim">44.1k</span>
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
           <button
             className="icon-btn hover:!text-danger"
             title="Delete"

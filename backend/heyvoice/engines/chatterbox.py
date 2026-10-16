@@ -30,6 +30,42 @@ ML_LANGS = ["en", "ar", "da", "de", "el", "es", "fi", "fr", "he", "hi", "it", "j
             "ms", "nl", "no", "pl", "pt", "ru", "sv", "sw", "tr", "zh", "cs", "hu"]
 
 
+def _patch_s3_tokenizer_dtype() -> None:
+    """chatterbox 0.1.7 turbo bug: the reference wav can arrive as float64
+    (librosa path), which crashes the S3 tokenizer against its float32 mel
+    filters ("expected scalar type Float but found Double"). Cast on ingest.
+    """
+    try:
+        import torch
+        from chatterbox.models.s3tokenizer import s3tokenizer as _s3
+
+        orig = _s3.S3Tokenizer.log_mel_spectrogram
+        if getattr(orig, "_hv_float32_patch", False):
+            return
+
+        def log_mel_spectrogram(self, audio, padding: int = 0):
+            if not torch.is_tensor(audio):
+                audio = torch.from_numpy(np.asarray(audio, dtype=np.float32))
+            else:
+                audio = audio.float()
+            return orig(self, audio, padding)
+
+        log_mel_spectrogram._hv_float32_patch = True  # type: ignore[attr-defined]
+        _s3.S3Tokenizer.log_mel_spectrogram = log_mel_spectrogram  # type: ignore[method-assign]
+    except Exception:  # pragma: no cover — package layout changed, nothing to patch
+        pass
+
+
+def _generate_params(model: Any) -> set[str]:
+    """Parameter names accepted by the loaded model's generate()."""
+    try:
+        import inspect
+
+        return set(inspect.signature(model.generate).parameters)
+    except (TypeError, ValueError):
+        return set()
+
+
 class ChatterboxEngine(EngineBase):
     id = "chatterbox"
     name = "Chatterbox"
@@ -70,6 +106,7 @@ class ChatterboxEngine(EngineBase):
             self.device = self.pick_device(device)
             dev = "cuda" if self.device == "cuda" else "cpu"
             turbo_cls, ml_cls = self._imports()
+            _patch_s3_tokenizer_dtype()
             role = MODELS[key]["role"]
             if role == "multilingual":
                 if ml_cls is None:
@@ -88,7 +125,8 @@ class ChatterboxEngine(EngineBase):
         role = MODELS[self.loaded_key]["role"]
         kwargs: dict[str, Any] = {}
         if req.ref_audio:
-            kwargs["audio_prompt_path"] = req.ref_audio
+            kwargs["audio_prompt_path"] = (req.ref_audio[0] if isinstance(req.ref_audio, list)
+                                           else req.ref_audio)
         if req.exaggeration is not None:
             kwargs["exaggeration"] = float(max(0.0, min(2.0, req.exaggeration)))
         if req.temperature is not None:
@@ -101,6 +139,10 @@ class ChatterboxEngine(EngineBase):
             except TypeError:
                 wav = self.model.generate(req.text, language=lang, **kwargs)
         else:
+            if "norm_loudness" in _generate_params(self.model):
+                # References are loudness-normalized at ingest; turbo's built-in
+                # norm promotes the wav to float64 and breaks the S3 tokenizer.
+                kwargs["norm_loudness"] = False
             wav = self.model.generate(req.text, **kwargs)
 
         audio = wav.detach().cpu().numpy() if hasattr(wav, "detach") else np.asarray(wav)
