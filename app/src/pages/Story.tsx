@@ -1,14 +1,15 @@
 // Story mode — multi-speaker scripts rendered into one stitched track.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ArrowDown, ArrowUp, BookOpen, Copy, Loader2, Play, Plus, Search,
+  ArrowDown, ArrowUp, BookOpen, Copy, FileText, Loader2, Play, Plus, Search,
   Sparkles, Trash2, Wand2, X,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useApp } from '../lib/store'
 import type { StoryLine } from '../lib/types'
+import { parseScript } from '../lib/script'
 import VoiceSelect from '../components/VoiceSelect'
-import { Avatar, fmtDuration } from '../components/ui'
+import { Avatar, fmtDuration, Modal } from '../components/ui'
 
 const PAUSE_OPTIONS = [0, 200, 400, 800, 1500]
 const CHARS_PER_SEC = 14
@@ -56,6 +57,7 @@ export default function Story() {
   const toast = useApp((s) => s.toast)
   const [format, setFormat] = useState('wav')
   const [castQuery, setCastQuery] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
 
   const busy = !!job && (job.status === 'queued' || job.status === 'running')
   const activeCount = lines.filter((l) => l.text.trim()).length
@@ -121,6 +123,9 @@ export default function Story() {
           <span className="hidden text-[11.5px] tabular-nums text-fg-dim xl:block">
             {activeCount} line{activeCount === 1 ? '' : 's'} · {chars} chars · ~{fmtDuration(estSec)}
           </span>
+          <button className="btn" onClick={() => setImportOpen(true)} title="Paste a screenplay — lines and speakers are parsed automatically">
+            <FileText size={14} /> Import script
+          </button>
           <select className="select !w-auto" value={format} onChange={(e) => setFormat(e.target.value)} title="Output format">
             {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
           </select>
@@ -208,6 +213,9 @@ export default function Story() {
             <button className="btn" onClick={() => addLine()}>
               <Plus size={14} /> Add line
             </button>
+            <button className="btn btn-ghost" onClick={() => setImportOpen(true)}>
+              <FileText size={13} /> Import script
+            </button>
             {lines.length > 0 && (
               <>
                 <button className="btn btn-ghost" onClick={() => useStarter(STARTERS[0].texts)}>
@@ -221,7 +229,131 @@ export default function Story() {
           </div>
         </div>
       </div>
+
+      <ImportScriptModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
+  )
+}
+
+// ------------------------------------------------------------------ import modal
+function ImportScriptModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const voices = useApp((s) => s.voices)
+  const setLines = useApp((s) => s.setStoryLines)
+  const toast = useApp((s) => s.toast)
+  const [text, setText] = useState('')
+  const [mapping, setMapping] = useState<Record<string, string>>({})
+
+  const parsed = useMemo(() => parseScript(text), [text])
+
+  const defaultVoiceId = useMemo(() => {
+    const cloned = voices.filter((v) => v.kind !== 'preset')
+    return (cloned[0] || voices[0])?.id || ''
+  }, [voices])
+
+  // prefill speaker → voice (name match first, then round-robin over cloned voices)
+  useEffect(() => {
+    const cloned = voices.filter((v) => v.kind !== 'preset')
+    const pool = cloned.length ? cloned : voices
+    setMapping((prev) => {
+      const next: Record<string, string> = {}
+      parsed.speakers.forEach((sp, i) => {
+        const existing = prev[sp]
+        if (existing && voices.some((v) => v.id === existing)) {
+          next[sp] = existing
+          return
+        }
+        const key = sp.toLowerCase()
+        const exact = voices.find((v) => v.name.toLowerCase() === key)
+        const partial = exact || voices.find((v) => {
+          const n = v.name.toLowerCase()
+          return n.includes(key) || key.includes(n)
+        })
+        next[sp] = (partial || pool[i % Math.max(1, pool.length)] || voices[0])?.id || ''
+      })
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsed.speakers.join('|'), voices.length])
+
+  const apply = () => {
+    if (!parsed.lines.length) return
+    const mapped: StoryLine[] = parsed.lines.map((l) => ({
+      id: `l${++lineCounter}`,
+      voiceId: l.speaker ? (mapping[l.speaker] || defaultVoiceId) : defaultVoiceId,
+      text: l.text,
+      pauseAfterMs: 400,
+    }))
+    setLines(mapped)
+    toast('success', `Imported ${mapped.length} lines` +
+      (parsed.speakers.length ? ` · ${parsed.speakers.length} speaker${parsed.speakers.length === 1 ? '' : 's'}` : ''))
+    onClose()
+  }
+
+  const estSec = parsed.lines.reduce((n, l) => n + l.text.length, 0) / CHARS_PER_SEC
+
+  return (
+    <Modal open={open} onClose={onClose} title="Import script" width={700}>
+      <div className="flex flex-col gap-3.5">
+        <textarea
+          autoFocus
+          className="textarea min-h-[180px] font-mono !text-[12px] leading-relaxed"
+          placeholder={'Paste your script…\n\nNARRATOR: The lighthouse had been dark for three nights.\nMARA: We need to go. Now.\nALEX: Not until we find her.\n\nAlso works: [MARA] line  ·  **MARA:** line  ·  MARA — line'}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+
+        {text.trim() && (
+          <div className="rounded-xl border border-line bg-white/[0.02] px-4 py-3">
+            <div className="mb-2 flex items-center gap-2 text-[12px] text-fg-muted">
+              <FileText size={13} className="text-accent-soft" />
+              {parsed.lines.length} line{parsed.lines.length === 1 ? '' : 's'}
+              {parsed.speakers.length > 0 && ` · ${parsed.speakers.length} speaker${parsed.speakers.length === 1 ? '' : 's'}`}
+              <span className="text-fg-dim">· ~{fmtDuration(estSec)}</span>
+            </div>
+
+            {parsed.speakers.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {parsed.speakers.map((sp) => (
+                  <div key={sp} className="flex items-center gap-3">
+                    <span className="w-[130px] truncate text-[12px] font-semibold">{sp}</span>
+                    <VoiceSelect
+                      voices={voices}
+                      value={mapping[sp] || null}
+                      onSelect={(v) => setMapping((m) => ({ ...m, [sp]: v.id }))}
+                      compact
+                    />
+                    <span className="text-[10.5px] text-fg-dim">
+                      {parsed.lines.filter((l) => l.speaker === sp).length} line{parsed.lines.filter((l) => l.speaker === sp).length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[11.5px] text-fg-dim">
+                No speaker tags found — the text will load as single-voice lines, one per paragraph.
+              </div>
+            )}
+
+            <div className="mt-2.5 max-h-[110px] overflow-y-auto rounded-lg bg-ink-900/60 p-2.5 font-mono text-[10.5px] leading-relaxed text-fg-muted">
+              {parsed.lines.slice(0, 8).map((l, i) => (
+                <div key={i} className="truncate">
+                  <span className="text-accent-soft">{l.speaker || '·'}</span>{' '}
+                  {l.text.slice(0, 90)}{l.text.length > 90 ? '…' : ''}
+                </div>
+              ))}
+              {parsed.lines.length > 8 && <div className="text-fg-dim">… {parsed.lines.length - 8} more</div>}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-2">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={!parsed.lines.length} onClick={apply}>
+            Load into script
+          </button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 

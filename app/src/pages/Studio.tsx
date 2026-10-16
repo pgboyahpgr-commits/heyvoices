@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   Check, ChevronDown, ChevronRight, Clock, Copy, Download, Dices, Loader2,
-  Mic, Play, Plus, RefreshCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
+  Mic, Pause, Play, Plus, RefreshCcw, RotateCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { fileUrl } from '../lib/api'
@@ -20,9 +20,39 @@ const TEMPLATES: { name: string; text: string }[] = [
   { name: 'Ad read', text: 'Stop scrolling. [[pause:250ms]] This is the last productivity tool you will ever need.' },
 ]
 
+// Per-engine tuning knobs (mirrors backend capabilities). `auto` is the value
+// the engine uses while the knob stays untouched (null in the draft).
+type TuneKey = 'cfg_weight' | 'top_p' | 'top_k' | 'min_p' | 'repetition_penalty' | 'speed'
+interface TuneSpec {
+  key: TuneKey
+  label: string
+  min: number
+  max: number
+  step: number
+  auto: number
+  int?: boolean
+}
+
+const ENGINE_TUNING: Record<string, TuneSpec[]> = {
+  chatterbox: [
+    { key: 'cfg_weight', label: 'CFG weight', min: 0, max: 1, step: 0.05, auto: 0.5 },
+    { key: 'top_p', label: 'Top-p', min: 0, max: 1, step: 0.01, auto: 0.95 },
+    { key: 'min_p', label: 'Min-p', min: 0, max: 0.5, step: 0.01, auto: 0 },
+    { key: 'repetition_penalty', label: 'Repetition penalty', min: 1, max: 2, step: 0.05, auto: 1.2 },
+  ],
+  'qwen3-tts': [
+    { key: 'top_p', label: 'Top-p', min: 0.1, max: 1, step: 0.01, auto: 1.0 },
+    { key: 'top_k', label: 'Top-k', min: 1, max: 200, step: 1, auto: 50, int: true },
+    { key: 'repetition_penalty', label: 'Repetition penalty', min: 1, max: 1.5, step: 0.01, auto: 1.05 },
+  ],
+  kokoro: [
+    { key: 'speed', label: 'Speed', min: 0.5, max: 2, step: 0.05, auto: 1.0 },
+  ],
+}
+
 export default function Studio() {
   const { voices, models, generations, selectedVoiceId, selectVoice, draft, setDraft,
-    job, generate, info, setPage } = useApp()
+    job, generate, generateVariants, partial, info, setPage } = useApp()
   const textRef = useRef<HTMLTextAreaElement | null>(null)
   const [deliveryOpen, setDeliveryOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -37,6 +67,39 @@ export default function Studio() {
   const chars = draft.text.trim().length
   const words = draft.text.trim() ? draft.text.trim().split(/\s+/).length : 0
   const estSec = chars / 14
+
+  // which engine will render this request → decides the tuning panel
+  const tuneEngine = draft.model
+    ? (models.find((m) => m.id === draft.model)?.engine || voice?.engine || 'qwen3-tts')
+    : (voice?.engine || 'qwen3-tts')
+  const tuneSpecs = ENGINE_TUNING[tuneEngine] ?? []
+  const isTurbo = draft.model === 'chatterbox-turbo'
+  const patchTune = (key: TuneKey, v: number | null) =>
+    setDraft({ [key]: v } as Partial<typeof draft>)
+
+  // "play so far" — listens to the partial preview the backend writes while
+  // the rest of a long render is still generating
+  const partialAudio = useRef<HTMLAudioElement | null>(null)
+  const [partialPlaying, setPartialPlaying] = useState(false)
+  useEffect(() => {
+    if (!partial && partialAudio.current) {
+      partialAudio.current.pause()
+      setPartialPlaying(false)
+    }
+  }, [partial])
+  const togglePartial = () => {
+    if (!partial) return
+    if (!partialAudio.current) partialAudio.current = new Audio()
+    const el = partialAudio.current
+    if (partialPlaying) {
+      el.pause()
+      setPartialPlaying(false)
+      return
+    }
+    el.src = `${fileUrl(partial.file)}?v=${partial.seconds}`  // cache-bust newer previews
+    el.onended = () => setPartialPlaying(false)
+    el.play().then(() => setPartialPlaying(true)).catch(() => setPartialPlaying(false))
+  }
 
   const filteredGens = useMemo(() => {
     let list = generations
@@ -201,13 +264,34 @@ export default function Studio() {
 
               <div className="flex-1" />
 
+              {busy && partial && (
+                <button
+                  className="btn"
+                  onClick={togglePartial}
+                  title="Listen to what has rendered so far — the rest keeps generating"
+                >
+                  {partialPlaying ? <Pause size={13} /> : <Play size={13} />}
+                  Play so far · {fmtDuration(partial.seconds)}
+                </button>
+              )}
+
+              <div className="seg" title="One take, or three variations to compare side by side">
+                {[1, 3].map((n) => (
+                  <button key={n} data-on={draft.takes === n} onClick={() => setDraft({ takes: n })}>
+                    {n}×
+                  </button>
+                ))}
+              </div>
+
               <button
                 className="btn btn-primary !px-6 !py-2.5 !text-[13.5px]"
                 disabled={busy || !draft.text.trim()}
-                onClick={() => generate()}
+                onClick={() => (draft.takes > 1 ? generateVariants(draft.takes) : generate())}
               >
                 {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                {busy ? `Generating ${Math.round((job?.progress ?? 0) * 100)}%` : 'Generate'}
+                {busy
+                  ? `Generating ${Math.round((job?.progress ?? 0) * 100)}%`
+                  : draft.takes > 1 ? `Generate ${draft.takes} takes` : 'Generate'}
                 {!busy && <span className="ml-1 hidden rounded-md bg-white/20 px-1.5 py-px text-[10px] font-semibold lg:inline">Ctrl ↵</span>}
               </button>
             </div>
@@ -293,6 +377,31 @@ export default function Studio() {
                   <Toggle label="Compressor" checked={draft.effects.compressor}
                     onChange={(v) => setDraft({ effects: { ...draft.effects, compressor: v } })} />
                 </div>
+
+                {tuneSpecs.length > 0 && (
+                  <>
+                    <div className="col-span-full mt-2 flex flex-wrap items-center gap-2 border-t border-line pt-3.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-fg-dim">
+                        {engineLabel(tuneEngine)} tuning
+                      </span>
+                      <span className="text-[10.5px] text-fg-dim/80">untouched knobs use the engine's own defaults</span>
+                    </div>
+                    {tuneSpecs.map((t) => (
+                      <TuneSlider
+                        key={t.key}
+                        label={t.label}
+                        value={draft[t.key] as number | null}
+                        auto={t.key === 'cfg_weight' && isTurbo ? 0 : t.auto}
+                        min={t.min}
+                        max={t.max}
+                        step={t.step}
+                        onChange={(v) => patchTune(t.key, v)}
+                        onReset={() => patchTune(t.key, null)}
+                        format={(v) => (t.int ? String(Math.round(v)) : v.toFixed(2))}
+                      />
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -595,6 +704,47 @@ function TakeRow({ gen }: { gen: Generation }) {
       </div>
 
       <ChevronRight size={14} className={clsx('shrink-0 text-fg-dim transition-transform', selected && 'rotate-90 text-accent-soft')} />
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------ tune slider
+function TuneSlider({
+  label, value, auto, min, max, step, onChange, onReset, format,
+}: {
+  label: string
+  value: number | null
+  auto: number
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+  onReset: () => void
+  format?: (v: number) => string
+}) {
+  const shown = value ?? auto
+  const fill = ((shown - min) / (max - min)) * 100
+  const fmt = format ? format(shown) : shown.toFixed(2)
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[11.5px] font-medium text-fg-muted">{label}</span>
+        <span className="flex items-center gap-1.5">
+          <span className={clsx('text-[11px] tabular-nums', value == null && 'text-fg-dim')}>
+            {value == null ? `auto · ${fmt}` : fmt}
+          </span>
+          {value != null && (
+            <button className="text-fg-dim transition-colors hover:text-fg" title="Back to engine default" onClick={onReset}>
+              <RotateCcw size={11} />
+            </button>
+          )}
+        </span>
+      </div>
+      <input
+        type="range" min={min} max={max} step={step} value={shown}
+        style={{ '--fill': `${fill}%` } as CSSProperties}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+      />
     </div>
   )
 }

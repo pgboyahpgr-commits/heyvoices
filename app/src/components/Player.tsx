@@ -1,5 +1,5 @@
 // Global audio player dock with waveform — appears when a take is selected.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import {
   BookOpen, Download, FileText, Music, Pause, Play, RefreshCcw, Repeat, Star, Trash2, X,
@@ -19,6 +19,8 @@ export default function Player() {
   const regenerate = useApp((s) => s.regenerate)
   const playTick = useApp((s) => s.playTick)
   const voices = useApp((s) => s.voices)
+  const generations = useApp((s) => s.generations)
+  const toast = useApp((s) => s.toast)
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const wsRef = useRef<WaveSurfer | null>(null)
@@ -77,6 +79,19 @@ export default function Player() {
 
   if (!gen) return null
 
+  // 3-take variant group ("vt…" batch): show a take picker + keep/discard tools
+  const variants = gen.batch_id?.startsWith('vt')
+    ? generations
+        .filter((g) => g.batch_id === gen.batch_id)
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || '') || a.id.localeCompare(b.id))
+    : []
+  const discardOthers = async () => {
+    const others = variants.filter((v) => v.id !== gen.id)
+    if (!others.length) return
+    for (const v of others) await deleteGen(v.id)
+    toast('info', `Kept this take — removed ${others.length} other${others.length > 1 ? 's' : ''}`)
+  }
+
   const voiceColor = voices.find((v) => v.id === gen.voice_id)?.color
   const cleanTitle = gen.text.replace(/\s+/g, ' ').trim().slice(0, 60) || gen.voice_name
   const chapterUrl = (fmt: 'm4b' | 'mp3') =>
@@ -87,6 +102,37 @@ export default function Player() {
   return (
     <div className="animate-in relative border-t border-line px-5 py-3.5 backdrop-blur" style={{ background: 'linear-gradient(180deg, rgba(22,22,28,.78), rgba(12,12,16,.97))' }}>
       <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-accent/35 to-transparent" />
+      {variants.length > 1 && (
+        <div className="mb-2.5 flex items-center gap-1.5">
+          <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-dim">Variants</span>
+          {variants.map((v, i) => (
+            <button
+              key={v.id}
+              className={clsx(
+                'chip !py-1 !text-[11px]',
+                v.id === gen.id && '!border-accent/60 !bg-accent/12 !text-accent-soft',
+              )}
+              onClick={() => selectGen(v)}
+              title={v.text.slice(0, 120)}
+            >
+              Take {i + 1} · {fmtDuration(v.duration)}{v.favorite ? ' ★' : ''}
+            </button>
+          ))}
+          <div className="flex-1" />
+          {!gen.favorite && (
+            <button className="btn !py-1 !text-[11px]" onClick={() => patchGen(gen.id, { favorite: true })}>
+              <Star size={11} /> Keep this one
+            </button>
+          )}
+          <button
+            className="btn !py-1 !text-[11px]"
+            onClick={discardOthers}
+            title="Delete the other takes of this set"
+          >
+            <Trash2 size={11} /> Discard others
+          </button>
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <button
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition-transform hover:scale-105 active:scale-95"

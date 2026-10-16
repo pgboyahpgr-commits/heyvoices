@@ -1,11 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  Box, Check, Download, FolderOpen, HardDrive, Loader2, Zap,
+  AlertTriangle, Box, Check, Download, FolderOpen, HardDrive, Loader2, ShieldCheck, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { api } from '../lib/api'
 import { useApp } from '../lib/store'
-import type { ModelInfo } from '../lib/types'
+import type { ModelInfo, VerifyResult } from '../lib/types'
 import { engineLabel } from '../components/ui'
 
 const ENGINE_INFO: Record<string, { tagline: string; caps: string[] }> = {
@@ -105,6 +105,44 @@ export default function Models() {
 }
 
 function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () => void }) {
+  const toast = useApp((s) => s.toast)
+  const refreshModels = useApp((s) => s.refreshModels)
+  const [verifying, setVerifying] = useState(false)
+  const [repairing, setRepairing] = useState(false)
+  const [verify, setVerify] = useState<VerifyResult | null>(null)
+
+  const runVerify = async () => {
+    setVerifying(true)
+    try {
+      const r = await api.verifyModel(m.id)
+      setVerify(r)
+      if (r.ok) {
+        toast('success', r.baseline
+          ? `Baseline recorded for ${m.name}`
+          : `${m.name} verified — all ${r.files} files intact (${r.size_gb} GB)`)
+      } else {
+        toast('error', `${m.name}: ${r.missing_count} file(s) missing, truncated or incomplete`)
+      }
+    } catch (e: any) {
+      toast('error', e.message)
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const runRepair = async () => {
+    setRepairing(true)
+    try {
+      await api.repairModel(m.id)
+      toast('info', 'Repair started — only missing or truncated files are fetched again')
+      refreshModels()
+      window.setTimeout(() => setRepairing(false), 8000)
+    } catch (e: any) {
+      toast('error', e.message)
+      setRepairing(false)
+    }
+  }
+
   const stateBadge = {
     absent: null,
     downloading: <span className="badge badge-warn"><Loader2 size={10} className="animate-spin" /> Downloading {Math.round(m.progress * 100)}%</span>,
@@ -146,7 +184,41 @@ function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () =
           <span className="text-[11.5px] tabular-nums text-fg-muted">{m.on_disk_gb ?? 0} / {m.size_gb} GB</span>
         )}
         {(m.state === 'ready' || m.state === 'loaded') && (
-          <span className="text-[11.5px] text-fg-dim">loads automatically on first use</span>
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="text-[11.5px] text-fg-dim">loads automatically on first use</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                className="btn !py-1.5 !text-[11.5px]"
+                disabled={verifying}
+                onClick={runVerify}
+                title="Check every model file against its manifest — catches interrupted downloads"
+              >
+                {verifying ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}
+                Verify
+              </button>
+              {repairing && (
+                <span className="badge badge-warn"><Loader2 size={10} className="animate-spin" /> repairing</span>
+              )}
+            </div>
+            {verify && (
+              <div className={clsx('max-w-[300px] text-right text-[10.5px]', verify.ok ? 'text-ok' : 'text-warn')}>
+                {verify.ok ? (
+                  <>
+                    ✓ {verify.files} file{verify.files === 1 ? '' : 's'} · {verify.size_gb} GB
+                    {verify.baseline ? ' · baseline recorded' : ' · intact'}
+                  </>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <AlertTriangle size={10} />
+                    {verify.missing_count} file{verify.missing_count === 1 ? '' : 's'} missing or incomplete —{' '}
+                    <button className="underline transition-colors hover:text-fg" onClick={runRepair}>
+                      repair now
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

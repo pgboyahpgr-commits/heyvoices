@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Check, ChevronRight, CircleDashed, Film, Loader2, Mic, Pencil, Play, Plus, Search, Sparkles,
+  AlertTriangle, Check, ChevronRight, CircleDashed, Film, Loader2, Mic, Pencil, Play, Plus, Search, Sparkles,
   Square, Trash2, Upload, UserRound, Wand2, X, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -286,6 +286,7 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
   const [testProgress, setTestProgress] = useState(-1)
   const [testFile, setTestFile] = useState<string | null>(null)
   const [doneVoice, setDoneVoice] = useState<Voice | null>(null)
+  const [reTranscribing, setReTranscribing] = useState<Record<string, boolean>>({})
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
@@ -333,6 +334,20 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
     }
   }
   const stopRecording = () => { recorderRef.current?.stop(); setRecording(false) }
+
+  const betterTranscript = async (s: IngestResult, i: number) => {
+    setReTranscribing((m) => ({ ...m, [s.upload_id]: true }))
+    toast('info', 'Upgrading transcript with large-v3-turbo — first run downloads ~1.5 GB')
+    try {
+      const r = await api.retranscribe({ upload_id: s.upload_id, size: 'turbo' })
+      setSamples((all) => all.map((x, j) => (j === i ? { ...x, transcript: r.transcript } : x)))
+      toast('success', 'Transcript upgraded — review it before creating the voice')
+    } catch (e: any) {
+      toast('error', 'Re-transcribe failed: ' + e.message)
+    } finally {
+      setReTranscribing((m) => ({ ...m, [s.upload_id]: false }))
+    }
+  }
 
   const createAndTest = async () => {
     if (!name.trim()) { toast('error', 'Name your voice first'); return }
@@ -439,6 +454,26 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
                       </button>
                     </div>
                   </div>
+                  {s.analysis && (
+                    <div className="mb-2 rounded-lg bg-white/[0.02] px-2.5 py-2">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px]">
+                        <span className={clsx('flex items-center gap-1 font-semibold',
+                          s.analysis.verdict === 'good' ? 'text-ok' : s.analysis.verdict === 'poor' ? 'text-danger' : 'text-warn')}>
+                          {s.analysis.verdict === 'good' ? <Check size={11} /> : <AlertTriangle size={11} />}
+                          {s.analysis.verdict === 'good' ? 'Great reference'
+                            : s.analysis.verdict === 'fair' ? 'Usable reference' : 'Weak reference'}
+                        </span>
+                        <span className="tabular-nums text-fg-dim">SNR {s.analysis.snr_db} dB</span>
+                        <span className="tabular-nums text-fg-dim">speech {Math.round(s.analysis.speech_ratio * 100)}%</span>
+                        {s.analysis.clipping_pct > 0.5 && (
+                          <span className="tabular-nums text-warn">clipping {s.analysis.clipping_pct}%</span>
+                        )}
+                      </div>
+                      {s.analysis.notes.map((n, k) => (
+                        <div key={k} className="mt-0.5 text-[10.5px] text-fg-dim">• {n}</div>
+                      ))}
+                    </div>
+                  )}
                   <textarea
                     className="textarea !text-[12px]"
                     rows={2}
@@ -446,6 +481,21 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
                     value={s.transcript}
                     onChange={(e) => setSamples((all) => all.map((x, j) => j === i ? { ...x, transcript: e.target.value } : x))}
                   />
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      className="chip !py-1 !text-[10.5px] disabled:opacity-60"
+                      disabled={!!reTranscribing[s.upload_id]}
+                      onClick={() => betterTranscript(s, i)}
+                      title="Re-run Whisper with the large-v3-turbo model — clearly better on names and numbers. Downloads ~1.5 GB once."
+                    >
+                      {reTranscribing[s.upload_id]
+                        ? <><Loader2 size={11} className="animate-spin" /> Upgrading transcript…</>
+                        : <><Sparkles size={11} /> Better transcript (large-v3-turbo)</>}
+                    </button>
+                    {s.transcript_error && (
+                      <span className="text-[10.5px] text-danger">auto-transcribe failed — edit manually or upgrade</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -637,6 +687,7 @@ function EditModal({ voice, onClose }: { voice: Voice | null; onClose: () => voi
   const [description, setDescription] = useState('')
   const [language, setLanguage] = useState('auto')
   const [engine, setEngine] = useState('')
+  const [reBusy, setReBusy] = useState(false)
 
   useEffect(() => {
     if (voice) { setName(voice.name); setDescription(voice.description); setLanguage(voice.language); setEngine(voice.engine) }
@@ -681,7 +732,31 @@ function EditModal({ voice, onClose }: { voice: Voice | null; onClose: () => voi
         </div>
         {voice && voice.samples.length > 0 && (
           <div>
-            <div className="mb-1.5 text-[12px] font-medium text-fg-muted">Sample transcript</div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[12px] font-medium text-fg-muted">Sample transcript</span>
+              <button
+                className="chip !py-0.5 !text-[10.5px] disabled:opacity-60"
+                disabled={reBusy}
+                title="Re-run Whisper with large-v3-turbo on the stored sample — clearly better on names and numbers"
+                onClick={async () => {
+                  setReBusy(true)
+                  try {
+                    await api.retranscribe({ voice_id: voice.id, sample_id: voice.samples[0].id, size: 'turbo' })
+                    toast('success', 'Transcript upgraded — reopen to review')
+                    useApp.getState().refreshVoices()
+                    onClose()
+                  } catch (e: any) {
+                    toast('error', 'Re-transcribe failed: ' + e.message)
+                  } finally {
+                    setReBusy(false)
+                  }
+                }}
+              >
+                {reBusy
+                  ? <><Loader2 size={11} className="animate-spin" /> Upgrading…</>
+                  : <><Sparkles size={11} /> Better transcript</>}
+              </button>
+            </div>
             <textarea
               className="textarea" rows={2}
               defaultValue={voice.samples[0].transcript}
@@ -708,7 +783,9 @@ function pollJob(jobId: string, onUpdate: (job: any) => void) {
     try {
       const job = await api.job(jobId)
       onUpdate(job)
-      if (job.status === 'done' || job.status === 'error') window.clearInterval(timer)
+      if (job.status === 'done' || job.status === 'error' || job.status === 'canceled') {
+        window.clearInterval(timer)
+      }
     } catch {
       /* keep polling */
     }

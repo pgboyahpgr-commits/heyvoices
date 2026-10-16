@@ -61,11 +61,12 @@ export interface JobInfo {
   id: string
   type: string
   label: string
-  status: 'queued' | 'running' | 'done' | 'error'
+  status: 'queued' | 'running' | 'done' | 'error' | 'canceled'
   progress: number
   note: string
   error?: string | null
   result?: any
+  created_at?: string
 }
 
 export interface Settings {
@@ -109,6 +110,38 @@ export interface IngestResult {
   source?: 'audio' | 'video'
   trimmed_silence?: boolean
   capped?: boolean
+  analysis?: RefAnalysis
+}
+
+export interface RefAnalysis {
+  duration: number
+  peak_dbfs: number
+  snr_db: number
+  speech_ratio: number
+  clipping_pct: number
+  verdict: 'good' | 'fair' | 'poor'
+  notes: string[]
+}
+
+export interface VramInfo {
+  available: boolean
+  total_gb?: number
+  free_gb?: number
+  used_gb?: number
+  alloc_gb?: number
+  reserved_gb?: number
+}
+
+export interface VerifyResult {
+  ok: boolean
+  baseline?: boolean
+  reason?: string
+  files?: number
+  size_gb?: number
+  missing?: string[]
+  mismatched?: string[]
+  incomplete?: number
+  missing_count?: number
 }
 
 export interface EffectsOptions {

@@ -1,6 +1,6 @@
 // Tiny API client for the local HeyVoice backend.
 import type {
-  Generation, IngestResult, JobInfo, ModelInfo, Settings, SystemInfo, Voice,
+  Generation, IngestResult, JobInfo, ModelInfo, Settings, SystemInfo, VerifyResult, Voice, VramInfo,
 } from './types'
 
 export const BASE = 'http://127.0.0.1:17300'
@@ -19,10 +19,14 @@ async function j<T>(res: Response): Promise<T> {
 
 const json = { 'Content-Type': 'application/json' }
 
-export const api = {
-  health: () => fetch(`${BASE}/health`).then((r) => r.ok),
+// Heartbeat/telemetry calls get a hard timeout: if the browser's connection
+// pool ever wedges, the status dot must flip to offline instead of freezing.
+const ping = (ms: number) => ({ signal: AbortSignal.timeout(ms) })
 
-  info: () => fetch(`${BASE}/system/info`).then((r) => j<SystemInfo>(r)),
+export const api = {
+  health: () => fetch(`${BASE}/health`, ping(5000)).then((r) => r.ok),
+
+  info: () => fetch(`${BASE}/system/info`, ping(8000)).then((r) => j<SystemInfo>(r)),
 
   eventsUrl: () => `${BASE}/system/events`,
 
@@ -31,6 +35,10 @@ export const api = {
   downloadModel: (id: string) =>
     fetch(`${BASE}/models/download`, { method: 'POST', headers: json, body: JSON.stringify({ id }) }).then((r) => j(r)),
   unloadAll: () => fetch(`${BASE}/models/unload`, { method: 'POST' }).then((r) => j(r)),
+  verifyModel: (id: string) =>
+    fetch(`${BASE}/models/verify`, { method: 'POST', headers: json, body: JSON.stringify({ id }) }).then((r) => j<VerifyResult>(r)),
+  repairModel: (id: string) =>
+    fetch(`${BASE}/models/repair`, { method: 'POST', headers: json, body: JSON.stringify({ id }) }).then((r) => j(r)),
 
   // voices
   voices: () => fetch(`${BASE}/voices`).then((r) => j<Voice[]>(r)),
@@ -51,6 +59,19 @@ export const api = {
     fetch(`${BASE}/voices/from-generation`, {
       method: 'POST', headers: json, body: JSON.stringify({ generation_id, name, description }),
     }).then((r) => j<Voice>(r)),
+  retranscribe: (body: { upload_id?: string; voice_id?: string; sample_id?: string; size?: string }) =>
+    fetch(`${BASE}/voices/re-transcribe`, { method: 'POST', headers: json, body: JSON.stringify(body) })
+      .then((r) => j<{ transcript: string; size: string }>(r)),
+
+  // jobs / queue
+  jobsActive: () => fetch(`${BASE}/jobs?active=true`, ping(8000)).then((r) => j<JobInfo[]>(r)),
+  cancelJob: (id: string) => fetch(`${BASE}/jobs/${id}/cancel`, { method: 'POST' }).then((r) => j<{ id: string; status: string }>(r)),
+  moveJob: (id: string, offset: number) =>
+    fetch(`${BASE}/jobs/${id}/move`, { method: 'POST', headers: json, body: JSON.stringify({ offset }) }).then((r) => j<{ ok: boolean }>(r)),
+  clearJobs: () => fetch(`${BASE}/jobs/clear`, { method: 'POST' }).then((r) => j<{ cleared: number }>(r)),
+
+  // system telemetry
+  vram: () => fetch(`${BASE}/system/vram`, ping(8000)).then((r) => j<VramInfo>(r)),
 
   // generation
   generate: (body: Record<string, any>) =>

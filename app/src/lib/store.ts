@@ -19,6 +19,14 @@ interface StudioDraft {
   exaggeration: number
   temperature: number
   seed: number | null
+  // engine tuning knobs — null = engine default ("auto")
+  cfg_weight: number | null
+  top_p: number | null
+  top_k: number | null
+  min_p: number | null
+  repetition_penalty: number | null
+  speed: number | null
+  takes: number        // 1 = single take, 3 = generate three variants
   normalize: boolean
   format: string
   effects: {
@@ -50,6 +58,7 @@ interface State {
   playTick: number
   paletteOpen: boolean
   intent: string | null
+  partial: { job_id: string; file: string; seconds: number } | null
 
   setPage: (p: Page) => void
   toast: (kind: Toast['kind'], message: string) => void
@@ -68,6 +77,7 @@ interface State {
   refreshModels: () => Promise<void>
   refreshGenerations: () => Promise<void>
   generate: (opts?: { text?: string; voiceId?: string | null; batchId?: string; silent?: boolean }) => Promise<string | null>
+  generateVariants: (count?: number) => Promise<void>
   renderStory: (opts?: { lines?: StoryLine[]; format?: string }) => Promise<string | null>
   patchGen: (id: string, patch: Record<string, any>) => Promise<void>
   deleteGen: (id: string) => Promise<void>
@@ -107,6 +117,34 @@ function connectSSE(set: SetPatch, get: () => State) {
     }
   }
 }
+function genBody(draft: StudioDraft, text: string, voiceId: string | null, batchId: string,
+                 seed: number | null, overrides?: Record<string, any>): Record<string, any> {
+  const fx = draft.effects
+  const hasFx = fx.gain_db !== 0 || fx.pitch_semitones !== 0 || fx.reverb_mix !== 0 ||
+    fx.highpass_hz > 0 || fx.lowpass_hz > 0 || fx.compressor
+  return {
+    text,
+    voice_id: voiceId || null,
+    model: draft.model || null,
+    language: draft.language === 'auto' ? null : draft.language,
+    instruct: draft.instruct,
+    exaggeration: draft.exaggeration,
+    temperature: draft.temperature,
+    seed,
+    cfg_weight: draft.cfg_weight,
+    top_p: draft.top_p,
+    top_k: draft.top_k,
+    min_p: draft.min_p,
+    repetition_penalty: draft.repetition_penalty,
+    speed: draft.speed,
+    normalize: draft.normalize,
+    effects: hasFx ? fx : {},
+    output_format: draft.format,
+    batch_id: batchId,
+    ...(overrides || {}),
+  }
+}
+
 let infoTimer: number | null = null
 
 export const useApp = create<State>((set, get) => ({
@@ -127,6 +165,7 @@ export const useApp = create<State>((set, get) => ({
   playTick: 0,
   paletteOpen: false,
   intent: null,
+  partial: null,
   draft: {
     text: '',
     language: 'auto',
@@ -135,6 +174,13 @@ export const useApp = create<State>((set, get) => ({
     exaggeration: 0.5,
     temperature: 0.8,
     seed: null,
+    cfg_weight: null,
+    top_p: null,
+    top_k: null,
+    min_p: null,
+    repetition_penalty: null,
+    speed: null,
+    takes: 1,
     normalize: true,
     format: 'wav',
     effects: { gain_db: 0, pitch_semitones: 0, reverb_mix: 0, highpass_hz: 0, lowpass_hz: 0, compressor: false },
@@ -218,31 +264,53 @@ export const useApp = create<State>((set, get) => ({
       return null
     }
     const voiceId = opts?.voiceId !== undefined ? opts.voiceId : selectedVoiceId
-    const fx = draft.effects
-    const hasFx = fx.gain_db !== 0 || fx.pitch_semitones !== 0 || fx.reverb_mix !== 0 || fx.highpass_hz > 0 || fx.lowpass_hz > 0 || fx.compressor
     try {
-      const { job_id } = await api.generate({
-        text,
-        voice_id: voiceId || null,
-        model: draft.model || null,
-        language: draft.language === 'auto' ? null : draft.language,
-        instruct: draft.instruct,
-        exaggeration: draft.exaggeration,
-        temperature: draft.temperature,
-        seed: draft.seed,
-        normalize: draft.normalize,
-        effects: hasFx ? fx : {},
-        output_format: draft.format,
-        batch_id: opts?.batchId || '',
-      })
+      const { job_id } = await api.generate(
+        genBody(draft, text, voiceId ?? null, opts?.batchId || '', draft.seed))
       set({
         job: { id: job_id, type: 'generate', label: 'Generate', status: 'queued', progress: 0, note: '' },
         jobStartedAt: Date.now(),
+        partial: null,
       })
       return job_id
     } catch (err: any) {
       get().toast('error', err.message || String(err))
       return null
+    }
+  },
+
+  generateVariants: async (count = 3) => {
+    const { draft, selectedVoiceId, voices } = get()
+    const text = draft.text.trim()
+    if (!text) {
+      get().toast('error', 'Write some text first')
+      return
+    }
+    const batchId = `vt${Date.now().toString(36)}`
+    // Kokoro is deterministic: identical inputs give identical audio, so nudge
+    // the speaking speed a hair per take — genuinely different pacing to compare.
+    const voice = voices.find((v) => v.id === selectedVoiceId)
+    const isKokoro = voice?.engine === 'kokoro'
+    const baseSpeed = draft.speed ?? 1.0
+    const ids: string[] = []
+    try {
+      for (let i = 0; i < count; i++) {
+        const seed = draft.seed != null ? draft.seed + i : null
+        const overrides = isKokoro && i > 0
+          ? { speed: Math.min(2, Math.max(0.5, baseSpeed + i * 0.03)) }
+          : undefined
+        const { job_id } = await api.generate(
+          genBody(draft, text, selectedVoiceId ?? null, batchId, seed, overrides))
+        ids.push(job_id)
+      }
+      set({
+        job: { id: ids[0], type: 'generate', label: `${count} takes`, status: 'queued', progress: 0, note: '' },
+        jobStartedAt: Date.now(),
+        partial: null,
+      })
+      get().toast('info', `${count} takes queued — pick your favorite in the player when they land`)
+    } catch (err: any) {
+      get().toast('error', err.message || String(err))
     }
   },
 
@@ -275,7 +343,9 @@ export const useApp = create<State>((set, get) => ({
   },
 
   patchGen: async (id, patch) => {
-    await api.patchGeneration(id, patch)
+    const gen = await api.patchGeneration(id, patch)
+    // keep the player's selected take in sync (favorite/star state etc.)
+    set((s) => ({ selectedGen: s.selectedGen && s.selectedGen.id === id ? gen : s.selectedGen }))
     await get().refreshGenerations()
   },
   deleteGen: async (id) => {
@@ -317,16 +387,33 @@ function handleEvent(
               playTick: s.playTick + 1,
             }))
           }
+          if (state.partial?.job_id === job.id) set({ partial: null })
           get().toast('success', 'Take ready')
           setTimeout(() => set({ job: null }), 1200)
         }
         if (job.status === 'error') {
+          if (state.partial?.job_id === job.id) set({ partial: null })
           get().toast('error', job.error || 'Generation failed')
           setTimeout(() => set({ job: null }), 300)
+        }
+        if (job.status === 'canceled') {
+          if (state.partial?.job_id === job.id) set({ partial: null })
+          get().toast('info', 'Job canceled')
+          setTimeout(() => set({ job: null }), 400)
         }
       }
       break
     }
+    case 'partial': {
+      // "play so far" preview written after each chunk/line of a long render
+      if (state.job && data?.job_id === state.job.id && data?.file) {
+        set({ partial: { job_id: data.job_id, file: data.file, seconds: data.seconds || 0 } })
+      }
+      break
+    }
+    case 'queue':
+      get().refreshInfo().catch(() => {})
+      break
     case 'model': {
       const m = data as ModelInfo
       if (m?.id) {
@@ -345,8 +432,13 @@ function handleEvent(
     case 'generation': {
       if (data?.deleted) {
         set((s) => ({ generations: s.generations.filter((g) => g.id !== data.id) }))
-      } else if (data?.id && !state.job) {
-        get().refreshGenerations().catch(() => {})
+      } else if (data?.id) {
+        // Upsert straight from the event: sibling takes of a 3-take batch land
+        // while the tracked job is still set, so a guarded refetch would miss them.
+        const gen = data as Generation
+        set((s) => ({
+          generations: [gen, ...s.generations.filter((g) => g.id !== gen.id)],
+        }))
       }
       break
     }
