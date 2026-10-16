@@ -24,10 +24,20 @@
 - [x] Clone from audio **or video** clips: FFmpeg extracts the audio track (mp4/mov/mkv/webm/avi…),
       edge silence trimmed, loudness-normalized, capped at 60 s; reference is auditionable in the
       wizard (`/files/uploads`) before creating the voice
+- [x] Reference quality analysis: every clip scored on arrival (SNR, clipping, speech ratio,
+      duration) with plain-language notes + verdict chips in the wizard
+- [x] One-click transcript upgrade: re-run ASR with large-v3-turbo on any upload or stored sample
+      (updates the transcript in place, invalidates the cached clone prompt)
+- [x] Per-engine parameter surface in the UI: Chatterbox CFG/emotion, Qwen temperature/top-p/top-k/
+      rep-penalty, Kokoro speed — engine defaults shown as `auto`, one-click reset, values recorded
+      in `params.tuning`; `seed` now fixes the sampler for reproducible takes
+- [x] Model integrity checks + resume-aware download UI: per-model **Verify** (manifest baseline
+      recorded on first run) and one-click **Repair** (resumable re-download of missing files)
+- [x] VRAM telemetry: live `/system/vram` poll with rolling sparkline + peak tooltip in the top bar
+- [x] Job queue v2: cooperative cancel (instant for queued, between-chunks for running), reorder,
+      clear-queue, live chunk progress, and "play so far" partial previews written after every
+      finished chunk/line
 - [ ] Streaming playback for Qwen (97 ms first-packet streaming path)
-- [ ] Per-engine parameter surface in the UI (auto-shown based on capabilities)
-- [ ] Model integrity checks + resume-aware download UI
-- [ ] VRAM telemetry panel (live allocation graph)
 
 ## Phase 2 — Creation power tools
 - [x] Stories mode: multi-speaker editor — per-line voice, pause and delivery, one stitched render
@@ -42,6 +52,10 @@
       sentence-weighted approximation otherwise; batch ZIPs include each take's .srt), 44.1 kHz
       **.m4b** with per-line chapter marks + tags, and 44.1 kHz **.mp3** with ID3v2 tags — all in
       the player dock's export menu
+- [x] Script import: paste a script (or `NAME:`-tagged dialogue) → speakers auto-detected, mapped
+      to voices, line/duration preview → loaded straight into the story editor
+- [x] Take comparison player: render 3 takes of a line, audition them side by side with variant
+      chips, keep the best and discard the rest in one click
 - [ ] Text expansion: numbers/dates/units (SSML-lite)
 - [ ] Batch v2 (rest): per-row settings, retries, folder-per-character naming schemes
 
@@ -69,5 +83,4 @@
 
 ## Ideas backlog
 - Voice "blending" (interpolate two clone prompts)
-- Take comparison A/B player
 - Discord/Twitch read-aloud bridge

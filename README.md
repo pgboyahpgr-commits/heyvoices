@@ -28,13 +28,23 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   audio track is extracted with FFmpeg, silence-trimmed and normalized); Whisper auto-transcribes
   it and Qwen3-TTS or Chatterbox clones the timbre. Add up to three clips of the same speaker and
   they are blended into one clone prompt for a sharper match. Reusable forever, no per-use cost.
+  Every reference clip is **analyzed on arrival** (SNR, clipping, speech ratio, duration) with
+  plain-language verdicts, and any transcript can be upgraded to **large-v3-turbo** in one click.
 - **Voice design** — describe a voice in words ("calm middle-aged male, slightly husky") and
   generate it, then save the result as a clonable voice.
 - **Story mode** — write multi-speaker scripts: every line gets its own voice, pause length and
   optional delivery instruction, rendered into one stitched track. Ideal for audiobooks, podcasts,
-  game dialogue and NPC conversations.
+  game dialogue and NPC conversations. **Import a script** (or paste dialogue with `NAME:` tags)
+  and the speakers are auto-detected, mapped to voices, previewed with line/duration counts, and
+  loaded straight into the editor.
+- **3-take compare** — render one line three times in a row and audition them side by side in the
+  player: click through the takes, keep your favorite, discard the rest. (Kokoro is deterministic,
+  so its takes vary pacing slightly for a meaningful comparison.)
+- **Engine tuning** — per-engine advanced knobs (Chatterbox CFG/emotion, Qwen temperature/top-p/
+  top-k/rep-penalty, Kokoro speed) with the engine defaults shown as `auto` and one-click reset.
 - **One-click previews** — hear any voice (cloned or preset) with a single click; takes auto-play
-  when they finish.
+  when they finish. During long renders a **"Play so far"** button streams the partial audio
+  rendered up to that point — no waiting for the full line.
 - **25+ languages** — Qwen3-TTS (EN, ZH, JA, KO, DE, FR, RU, PT, ES, IT), Chatterbox Multilingual
   v3 (25 languages), Kokoro presets.
 - **Delivery control** — natural-language instructions (`speak slowly, whisper`) for Qwen preset
@@ -48,7 +58,12 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   ID3 tags**, or as an audiobook **.m4b with per-line chapter marks**, or SubRip **.srt** subtitles
   (exact timings for Story renders) from the player dock.
 - **Player dock** — waveform scrubbing, playback speed (1× / 1.25× / 1.5× / 0.75×), loop, star,
-  re-roll with a new seed, download.
+  re-roll with a new seed, download, and variant chips for 3-take batches.
+- **Live queue & telemetry** — the top bar shows real VRAM usage with a rolling sparkline; the
+  queue popover lists running + waiting jobs with live progress (chunk 3/5), per-job cancel,
+  reorder, and clear-queue — canceled renders stop between chunks and clean up after themselves.
+- **Model integrity** — verify any downloaded model against its recorded file manifest (catches
+  interrupted downloads) and repair it with a resumable re-download of just the missing files.
 - **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
   open folders…).
 - **Redesigned workspace** — command bar with live GPU/VRAM status, grouped sidebar, and a Studio

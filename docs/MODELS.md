@@ -13,9 +13,15 @@ licensed** — safe for personal use *and* for shipping products built on their 
 | Chatterbox Multilingual v3 | Chatterbox | 0.5B | ~1.2 GB | ~3 GB | MIT | 25 | Broadest language coverage |
 | Chatterbox Turbo | Chatterbox | 350M | ~1 GB | ~2.5 GB | MIT | EN | Fast + expressive tags |
 | Kokoro 82M | Kokoro | 82M | ~0.4 GB | CPU | Apache-2.0 | 8 | Instant preset voices |
-| Whisper `small` (faster-whisper) | ASR | 244M | ~0.5 GB | ~1.5 GB | MIT | 99 | Ref-text transcription + dictation |
+| Whisper `small` (faster-whisper) | ASR | 244M | ~0.5 GB | ~1.5 GB | MIT | 99 | Ref-text transcription (default) |
+| Whisper `large-v3-turbo` | ASR | 809M | ~1.6 GB | ~2 GB | MIT | 99 | "Better transcript" upgrade — names, numbers, punctuation |
 
 **Recommended starter set (~3 GB):** Qwen3-TTS 0.6B Base + Chatterbox + Kokoro.
+
+Every downloaded model gets a **file manifest** written at download time. The Models page can
+**Verify** any model against it (first run records the baseline) and **Repair** — a resumable
+re-download that only fetches missing or truncated files. Interrupted downloads are caught and
+fixed in place; no full re-download needed.
 
 ## Engines in detail
 
@@ -81,7 +87,9 @@ once; the catalog's `size_gb` reflects the runtime footprint, not the repo size.
 ## Quality tips (this is 80% of clone quality)
 
 1. **Reference audio: 10–30 s of clean, single-speaker speech, no music, no reverb.**
-2. Provide the transcript (auto or corrected) — biggest quality jump for Qwen3-TTS.
+2. Provide the transcript (auto or corrected) — biggest quality jump for Qwen3-TTS. The voice
+   editor's **Better transcript** button re-runs ASR with large-v3-turbo when the auto one fumbles
+   names, numbers, or punctuation.
 3. If a clone sounds flat, record 20–30 s with varied intonation, not monotone reading.
 4. For languages with tone (zh/ja/ko), use references in the same language you'll synthesize.
 5. Cloning is voice *transfer*, not acting: put emotion into the text's punctuation and the

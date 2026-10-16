@@ -23,9 +23,23 @@ loopback). Interactive OpenAPI docs are always available at `/docs` while the ba
 GPU name, `vram_total_gb`, `vram_free_gb`, `vram_used_gb`, `engines_loaded`, `models_dir`,
 `outputs_dir`, `disk_free_gb`, `settings`, active jobs.
 
+### `GET /system/vram`
+Cheap poll target for live VRAM telemetry (the top-bar meter):
+```json
+{ "available": true, "total_gb": 8.0, "free_gb": 5.4, "used_gb": 2.6,
+  "alloc_gb": 2.1, "reserved_gb": 2.4 }
+```
+`{"available": false}` when no CUDA device is present.
+
 ### `GET /system/events` — SSE
 Each message is `data: {"type": ..., "data": ..., "ts": ...}`. Event types:
-`job`, `model`, `model_error`, `voices`, `generation`, `engine`, `settings`.
+`job`, `model`, `model_error`, `voices`, `generation`, `engine`, `settings`, `queue`,
+`partial`.
+- `partial` — `{ "job_id", "file", "seconds" }`: a playable "so far" preview written after
+  each finished chunk/line. Served at `GET /files/outputs/<file>`; the file is removed when
+  the job finishes or is canceled.
+- `queue` — `{ "active": [job, …] }`: the full active queue re-broadcast after any
+  cancel / move / clear so clients stay in sync.
 A `: ping` comment is emitted every 15 s so idle connections stay alive.
 
 Example (Python):
@@ -76,8 +90,26 @@ FFmpeg extracts the audio track from video containers (mp4/mov/mkv/webm/avi…),
 The cleaned reference is playable at `GET /files/uploads/{upload_id}.wav`.
 ```json
 [{ "upload_id": "3c1f...", "filename": "clip.mp4", "converted": true, "source": "video",
-   "duration": 29.4, "transcript": "…", "trimmed_silence": true }]
+   "duration": 29.4, "transcript": "…", "trimmed_silence": true,
+   "analysis": { "duration": 29.4, "peak_dbfs": -3.1, "snr_db": 24.0,
+                 "speech_ratio": 0.82, "clipping_pct": 0.0, "verdict": "good",
+                 "notes": ["Clean single-speaker reference — great for cloning."] } }]
 ```
+`analysis.verdict` is `good | fair | poor` with human-readable `notes` (noise, clipping,
+too quiet, music-heavy, too short) — shown as chips in the clone wizard.
+
+### `POST /voices/re-transcribe`
+Re-runs ASR with a bigger Whisper model. Either a fresh upload (before creating the voice)
+or a stored voice sample (updates its transcript in place and invalidates the cached clone
+prompt so the next render uses it).
+```json
+{ "upload_id": "3c1f...",              // OR:
+  "voice_id": "a1b2...", "sample_id": "9f8e...",
+  "size": "turbo" }                    // tiny|base|small|medium|large-v3|turbo (default turbo)
+```
+→ `{ "transcript": "…", "size": "turbo" }`.
+`turbo` = large-v3-turbo: clearly better on names/numbers, ~8× realtime on a 4060, one-time
+~1.5 GB download into the models folder.
 
 ### `POST /voices`
 Creates a voice from uploaded reference clips (see `/voices/ingest`). Pass `samples` with
@@ -118,6 +150,9 @@ Changing samples invalidates the cached clone prompt automatically.
   "exaggeration": 0.6,             // Chatterbox emotion
   "temperature": 0.8,
   "seed": 12345,
+  "cfg_weight": null,              // engine tuning knobs — omit/null = engine default
+  "top_p": null, "top_k": null, "min_p": null,
+  "repetition_penalty": null, "speed": null,
   "normalize": true,
   "effects": { "gain_db": 0, "pitch_semitones": -2, "reverb_mix": 0.15,
                "highpass_hz": 80, "lowpass_hz": 0, "compressor": true },
@@ -128,12 +163,27 @@ Changing samples invalidates the cached clone prompt automatically.
 ```
 → `{ "job_id": "9a8b..." }`
 
+Tuning knobs are per-engine and validated at the engine boundary: Chatterbox uses
+`cfg_weight / exaggeration / top_p / min_p / repetition_penalty`, Qwen3-TTS uses
+`temperature / top_p / top_k / repetition_penalty`, Kokoro uses `speed` (0.5–2).
+`seed` fixes the sampler for reproducible takes. Applied values are recorded in
+`params.tuning` on the finished generation.
+
 `GET /jobs/{job_id}`:
 ```json
 { "id": "9a8b...", "type": "generate", "status": "running", "progress": 0.62,
   "note": "chunk 3/5", "error": null, "result": null }
 ```
 On success, `result.generation` is the finished generation record (same shape as `GET /generations`).
+Statuses: `queued` → `running` → `done | error | canceled`.
+
+### Queue controls
+- `GET /jobs` — every job (newest last). `GET /jobs?active=true` — running first, then queued.
+- `POST /jobs/{id}/cancel` → `{ "id", "status": "canceled" }`. Queued jobs cancel instantly;
+  the running job stops at the next safe point (between chunks/lines) and cleans up its
+  partial preview.
+- `POST /jobs/{id}/move` with `{ "offset": -1 }` (or `+1`) — reorder a queued job.
+- `POST /jobs/clear` → `{ "cleared": 2 }` — cancel every queued job; the running one keeps going.
 
 ### `POST /generate/story` — multi-speaker render
 Renders a script where **each line picks its own voice**, then stitches everything into one track.
@@ -217,6 +267,20 @@ Fields: `file` (audio), `size` (`tiny|base|small|medium|large-v3|turbo`, default
 
 ### `POST /models/download`
 `{ "id": "chatterbox-turbo" }` → starts a background snapshot download.
+
+### `POST /models/verify`
+`{ "id": "chatterbox-turbo" }` → checks every file against the manifest recorded at download
+time (the first call records the baseline):
+```json
+{ "ok": true, "baseline": false, "files": 13, "size_gb": 4.04,
+  "missing_count": 0, "bad": [] }
+```
+`ok: false` lists truncated/missing files in `bad` — catches interrupted downloads.
+
+### `POST /models/repair`
+`{ "id": "chatterbox-turbo" }` → `{ "started": true }`. Re-runs the resumable HF download:
+complete files are skipped, partial ones continue where they left off. Progress arrives as
+the usual `model` SSE events.
 
 ### `POST /models/unload`
 Unloads every loaded model from VRAM.
