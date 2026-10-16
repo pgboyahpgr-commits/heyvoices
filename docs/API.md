@@ -273,9 +273,10 @@ Fields: `file` (audio), `size` (`tiny|base|small|medium|large-v3|turbo`, default
 time (the first call records the baseline):
 ```json
 { "ok": true, "baseline": false, "files": 13, "size_gb": 4.04,
-  "missing_count": 0, "bad": [] }
+  "missing": [], "mismatched": [], "missing_count": 0 }
 ```
-`ok: false` lists truncated/missing files in `bad` — catches interrupted downloads.
+`ok: false` lists missing files in `missing` and truncated/changed files in `mismatched` —
+catches interrupted downloads.
 
 ### `POST /models/repair`
 `{ "id": "chatterbox-turbo" }` → `{ "started": true }`. Re-runs the resumable HF download:
