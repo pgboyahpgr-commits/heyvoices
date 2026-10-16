@@ -79,15 +79,15 @@ export default function Models() {
         const meta = ENGINE_INFO[engineId]
         return (
           <div key={engineId} className="panel overflow-hidden">
-            <div className="flex items-center justify-between border-b border-line bg-white/[0.015] px-5 py-3.5">
-              <div>
+            <div className="flex items-center justify-between gap-4 border-b border-line bg-white/[0.015] px-5 py-3.5">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <Box size={15} className="text-accent-soft" />
-                  <span className="text-[14.5px] font-semibold">{engineLabel(engineId)}</span>
+                  <Box size={15} className="shrink-0 text-accent-soft" />
+                  <span className="whitespace-nowrap text-[14.5px] font-semibold">{engineLabel(engineId)}</span>
                 </div>
                 <div className="mt-0.5 text-[11.5px] text-fg-dim">{meta?.tagline}</div>
               </div>
-              <div className="flex flex-wrap justify-end gap-1.5">
+              <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
                 {meta?.caps.map((c) => <span key={c} className="badge">{c}</span>)}
               </div>
             </div>
@@ -115,8 +115,8 @@ function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () =
   return (
     <div className="flex items-center gap-4 px-5 py-4">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[13.5px] font-semibold">{m.name}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="whitespace-nowrap text-[13.5px] font-semibold">{m.name}</span>
           <span className="badge">{m.params}</span>
           {m.recommended && <span className="badge badge-accent">Recommended</span>}
           {stateBadge}
