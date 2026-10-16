@@ -34,6 +34,9 @@ licensed** — safe for personal use *and* for shipping products built on their 
   zh cs hu), zero-shot cloning, emotion exaggeration slider.
 - Turbo: hundreds of milliseconds-class English model that understands paralinguistic tags:
   `[laugh] [chuckle] [sigh] [gasp] [whisper] [angry] [happy] [sad] [dramatic] [narration]`.
+  Verified on the RTX 4060 (10 s expressive take, cloning + tags together). The package's built-in
+  loudness norm hands the reference clip to the tokenizer as float64 and crashes — HeyVoice disables
+  it (references are pre-normalized) and patches the tokenizer to be dtype-safe.
 - Outputs embed an inaudible **PerTh watermark** — keep in mind for "clean" deliverables.
 
 ### Kokoro (Apache-2.0)

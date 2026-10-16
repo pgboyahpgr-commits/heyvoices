@@ -80,6 +80,10 @@ The cleaned reference is playable at `GET /files/uploads/{upload_id}.wav`.
 ```
 
 ### `POST /voices`
+Creates a voice from uploaded reference clips (see `/voices/ingest`). Pass `samples` with
+`upload_id` + optional `transcript` each. **Up to 3 clips are used per voice** (≤90 s combined):
+Qwen3-TTS conditions on all of them (ICL streams concatenated, speaker embeddings averaged),
+other engines use the first clip.
 ```json
 {
   "name": "Narrator",
@@ -146,16 +150,31 @@ Renders a script where **each line picks its own voice**, then stitches everythi
 }
 ```
 → `{ "job_id": "c3d4..." }`. The finished generation carries
-`params.story = true`, `params.lines` (the script, for re-editing) and
-`params.segments` (`[{ "voice_name", "text", "duration" }]` per line).
+`params.story = true`, `params.lines` (the script, for re-editing),
+`params.segments` (`[{ "voice_name", "text", "duration" }]` per line) and
+`params.line_timings` (`[{ "voice_name", "text", "start", "end" }]` — exact per-line offsets
+used by the subtitle export).
 
 ### `GET /generations?limit=100&batch_id=…`
 Newest first. Each record includes `file`, `duration`, `peaks` (96 values for waveform
 sparklines), `engine`, `model`, `params`.
 
 ### `GET /generations/export?batch_id=…`
-Streams a `.zip` with every take of a batch, named `<Voice Name> - <id>.<ext>` — ideal for
-game-line drops and chapter exports.
+Streams a `.zip` with every take of a batch — the audio as `<Voice Name> - <id>.<ext>` plus a
+matching `.srt` per take when it has text — ideal for game-line drops and chapter exports.
+
+### `GET /generations/{id}/srt` — subtitles
+`text/plain` SubRip attachment. Story renders use the recorded per-line timeline (exact cues);
+everything else is split into sentence-sized cues with character-weighted timing.
+→ `Content-Disposition: attachment; filename="heyvoice-<id>.srt"`.
+
+### `GET /generations/{id}/chapter?fmt=m4b|mp3&title=…&artist=…&album=…&track=N`
+Audiobook-ready export at **44.1 kHz** with metadata tags:
+- `fmt=m4b` (default) — AAC `.m4b` with native chapter marks (**one chapter per story line**,
+  titled with the line text; single-take renders get one chapter).
+- `fmt=mp3` — ID3v2-tagged MP3 (`title`/`artist`/`album`/`track`).
+Defaults: `title` = first 60 chars of the take's text, `artist` = voice name.
+→ attachment, e.g. `Storm Chapter.m4b`.
 
 ### `POST /generations/{id}/regenerate`
 Re-queues the same text/voice/settings as a fresh take → `{ "job_id": ... }`.
