@@ -18,7 +18,7 @@ export function Avatar({ voice, size = 38 }: { voice: Voice; size?: number }) {
       style={{
         width: size, height: size,
         background: `linear-gradient(135deg, ${voice.color}, ${voice.color}55)`,
-        boxShadow: `inset 0 0 0 1.5px rgba(255,255,255,.16), 0 3px 14px -4px ${voice.color}88`,
+        boxShadow: `inset 0 0 0 1.5px rgba(255,255,255,.16), 0 3px 12px -5px ${voice.color}66`,
         fontSize: size * 0.34,
       }}
     >

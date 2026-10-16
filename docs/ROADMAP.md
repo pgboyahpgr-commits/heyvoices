@@ -31,6 +31,8 @@
 - [x] Command palette (`Ctrl+K`): navigation + quick actions
 - [x] UI 2.0 refresh: command bar with live GPU/VRAM status, grouped sidebar, Studio voice rail,
       always-visible take replay, ambient dark theme, page transitions
+- [x] UI 3.0 polish: professional graphite + indigo palette (no neon glows), custom SVG brand mark
+      (app icon + favicon + animated splash), SVG empty-state illustrations, softer shadows/rings
 - [ ] Audiobook export: chapter splitting, 44.1 kHz re-render, ID3 tags
 - [ ] Text expansion: numbers/dates/units (SSML-lite)
 - [ ] Batch v2 (rest): per-row settings, retries, folder-per-character naming schemes

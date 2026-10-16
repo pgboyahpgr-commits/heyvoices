@@ -1,9 +1,10 @@
 import clsx from 'clsx'
 import {
-  AudioLines, BookOpen, Box, Braces, Layers, Settings2, Sparkles, Users, Zap,
+  BookOpen, Box, Braces, Layers, Settings2, Sparkles, Users, Zap,
 } from 'lucide-react'
 import { useApp } from '../lib/store'
 import type { Page } from '../lib/store'
+import { LogoMark } from './brand'
 
 const SECTIONS: { label: string; items: { id: Page; label: string; icon: React.ReactNode }[] }[] = [
   {
@@ -45,14 +46,11 @@ export default function Sidebar() {
   const cloned = voices.filter((v) => v.kind !== 'preset').length
 
   return (
-    <aside className="flex h-full w-[228px] shrink-0 flex-col border-r border-line" style={{ background: 'linear-gradient(180deg, #080b13 0%, #06080f 100%)' }}>
+    <aside className="flex h-full w-[228px] shrink-0 flex-col border-r border-line" style={{ background: 'linear-gradient(180deg, #101014 0%, #0a0a0d 100%)' }}>
       {/* logo */}
       <div className="flex items-center gap-2.5 px-4 pb-2 pt-5">
-        <div
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-white"
-          style={{ background: 'linear-gradient(135deg, #7c5cff, #22d3ee)', boxShadow: '0 4px 18px -4px rgba(124,92,255,.6), inset 0 1px 0 rgba(255,255,255,.25)' }}
-        >
-          <AudioLines size={18} />
+        <div style={{ filter: 'drop-shadow(0 4px 14px rgba(99,102,241,0.35))' }}>
+          <LogoMark size={36} />
         </div>
         <div>
           <div className="text-[15px] font-bold leading-tight tracking-[-0.015em]">HeyVoice</div>
@@ -82,7 +80,7 @@ export default function Sidebar() {
                     )}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-accent to-accent-2 shadow-[0_0_10px_rgba(124,92,255,.9)]" />
+                      <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-accent to-accent-2 shadow-[0_0_8px_rgba(99,102,241,.5)]" />
                     )}
                     <span className={clsx('transition-colors', active ? 'text-accent-soft' : 'text-fg-dim group-hover:text-fg-muted')}>
                       {item.icon}
@@ -123,8 +121,8 @@ export default function Sidebar() {
                 className="h-full rounded-full transition-all duration-700"
                 style={{
                   width: `${Math.max(2, pct)}%`,
-                  background: 'linear-gradient(90deg, #7c5cff, #22d3ee)',
-                  boxShadow: '0 0 8px rgba(124,92,255,.6)',
+                  background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 0 8px rgba(99,102,241,.35)',
                 }}
               />
             </div>

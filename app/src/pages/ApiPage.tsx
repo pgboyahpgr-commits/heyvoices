@@ -102,7 +102,7 @@ print("saved:", r.json()["url"])`
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <div className="panel p-5">
           <div className="mb-2 flex items-center gap-2 text-[13.5px] font-semibold">
-            <Terminal size={15} className="text-accent-2" /> Speak (simplest integration)
+            <Terminal size={15} className="text-accent-soft" /> Speak (simplest integration)
           </div>
           <p className="mb-3 text-[12px] text-fg-muted">
             Text in, audio out. Blocks until the file is ready (queues behind active jobs).
@@ -115,7 +115,7 @@ print("saved:", r.json()["url"])`
 
         <div className="panel p-5">
           <div className="mb-2 flex items-center gap-2 text-[13.5px] font-semibold">
-            <Braces size={15} className="text-accent-2" /> Async pipeline (generate + jobs)
+            <Braces size={15} className="text-accent-soft" /> Async pipeline (generate + jobs)
           </div>
           <p className="mb-3 text-[12px] text-fg-muted">
             For long scripts, queue with <span className="font-mono text-[11px]">/generate</span> and watch
@@ -138,7 +138,7 @@ print("saved:", r.json()["url"])`
             <div key={e.method + e.path} className="flex items-center gap-3 px-5 py-2.5">
               <span className={
                 'w-[52px] shrink-0 text-center text-[10px] font-bold tracking-wider ' +
-                (e.method === 'GET' ? 'text-accent-2' : e.method === 'DELETE' ? 'text-danger' : 'text-ok')
+                (e.method === 'GET' ? 'text-info' : e.method === 'DELETE' ? 'text-danger' : 'text-ok')
               }>
                 {e.method}
               </span>

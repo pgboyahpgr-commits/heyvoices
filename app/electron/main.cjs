@@ -1,11 +1,14 @@
 // HeyVoice Electron main process — hosts the UI and auto-starts the Python backend.
 const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const { spawn } = require('child_process')
 const http = require('http')
 
 const BACKEND_URL = 'http://127.0.0.1:17300'
 const UI_DEV_URL = 'http://127.0.0.1:5173'
+// dev window/taskbar icon; in packaged builds the exe icon is embedded by electron-builder
+const DEV_ICON = path.join(__dirname, '..', 'build', 'icon.png')
 let backendProc = null
 let win = null
 
@@ -57,7 +60,8 @@ function createWindow() {
     height: 960,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#0B0E14',
+    backgroundColor: '#0E0E12',
+    icon: fs.existsSync(DEV_ICON) ? DEV_ICON : undefined,
     autoHideMenuBar: true,
     title: 'HeyVoice',
     show: false,

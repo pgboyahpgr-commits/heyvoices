@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
-import { AudioLines, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Player from './components/Player'
 import CommandPalette from './components/CommandPalette'
 import { Toasts } from './components/ui'
+import { LogoMark } from './components/brand'
 import { useApp } from './lib/store'
 import Studio from './pages/Studio'
 import Story from './pages/Story'
@@ -27,12 +28,9 @@ export default function App() {
 
   if (!ready) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-5">
-        <div
-          className="flex h-16 w-16 items-center justify-center rounded-2xl text-white"
-          style={{ background: 'linear-gradient(135deg, #7c5cff, #22d3ee)', boxShadow: '0 8px 40px -8px rgba(124,92,255,.7)' }}
-        >
-          <AudioLines size={30} />
+      <div className="app-bg flex h-full flex-col items-center justify-center gap-5">
+        <div style={{ filter: 'drop-shadow(0 10px 32px rgba(99,102,241,0.4))' }}>
+          <LogoMark size={64} animated />
         </div>
         <div className="text-center">
           <div className="text-[16px] font-semibold">HeyVoice</div>

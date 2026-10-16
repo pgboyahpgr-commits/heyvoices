@@ -9,6 +9,7 @@ import { useApp } from '../lib/store'
 import type { IngestResult, Voice } from '../lib/types'
 import { LANGUAGES, langLabel } from '../lib/types'
 import { Avatar, Modal, Progress, engineLabel, fmtDuration } from '../components/ui'
+import { ArtVoices } from '../components/art'
 
 // Short lines for one-click voice previews, per language.
 const PREVIEW_TEXT = (lang: string) => {
@@ -76,7 +77,7 @@ export default function Voices() {
         </div>
         <div className="flex gap-2">
           <button className="btn" onClick={() => setDesignOpen(true)}>
-            <Wand2 size={14} className="text-accent-2" /> Design a voice
+            <Wand2 size={14} className="text-accent-soft" /> Design a voice
           </button>
           <button className="btn btn-primary" onClick={() => setWizardOpen(true)}>
             <Plus size={15} /> New voice
@@ -116,7 +117,10 @@ export default function Voices() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="panel py-14 text-center text-[13px] text-fg-muted">No voices match.</div>
+        <div className="panel flex flex-col items-center py-12 text-center text-[13px] text-fg-muted">
+          <ArtVoices width={130} className="mb-3 text-fg-dim" />
+          No voices match.
+        </div>
       )}
 
       <NewVoiceWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />

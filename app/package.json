@@ -37,6 +37,6 @@
     "appId": "sh.heyvoice.studio",
     "productName": "HeyVoice",
     "files": ["dist/**", "electron/**"],
-    "win": { "target": "nsis" }
+    "win": { "target": "nsis", "icon": "build/icon.ico" }
   }
 }

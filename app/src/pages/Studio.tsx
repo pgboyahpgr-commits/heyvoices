@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Check, ChevronDown, ChevronRight, Clock, Copy, Download, Dices, Layers, Loader2,
+  Check, ChevronDown, ChevronRight, Clock, Copy, Download, Dices, Loader2,
   Mic, Play, Plus, RefreshCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -9,6 +9,7 @@ import { useApp } from '../lib/store'
 import type { Generation, Voice } from '../lib/types'
 import { LANGUAGES, langLabel } from '../lib/types'
 import { Avatar, engineLabel, fmtDuration, Slider, Toggle, timeAgo } from '../components/ui'
+import { ArtTakes } from '../components/art'
 
 const INSTRUCT_CHIPS = ['whisper softly', 'excited and energetic', 'calm, slow, cinematic', 'sad and reflective', 'authoritative news anchor']
 const TAG_CHIPS = ['[laugh]', '[chuckle]', '[sigh]', '[gasp]', '[whisper]', '[angry]', '[happy]', '[sad]', '[dramatic]', '[narration]']
@@ -324,9 +325,7 @@ export default function Studio() {
             </div>
             {generations.length === 0 ? (
               <div className="panel flex flex-col items-center gap-2.5 py-12 text-center">
-                <div className="rounded-2xl border border-line bg-white/[0.03] p-3">
-                  <Layers size={22} className="text-fg-dim" />
-                </div>
+                <ArtTakes width={150} className="mb-1 text-fg-dim" />
                 <div className="text-[13.5px] font-medium text-fg-muted">No takes yet</div>
                 <div className="max-w-[400px] text-[12px] text-fg-dim">
                   Clone a voice from a short clip on the Voices page, then hit Generate — your audio history will appear here.
@@ -532,7 +531,7 @@ function TakeRow({ gen }: { gen: Generation }) {
     <div
       className={clsx(
         'panel panel-hover group flex cursor-pointer items-center gap-3.5 px-4 py-3 transition-all',
-        selected && '!border-accent/45 shadow-[0_0_0_1px_rgba(124,92,255,.25)]',
+        selected && '!border-accent/45 shadow-[0_0_0_1px_rgba(99,102,241,.3)]',
       )}
       onClick={() => selectGen(gen)}
     >
@@ -568,7 +567,7 @@ function TakeRow({ gen }: { gen: Generation }) {
             className="flex-1 rounded-sm"
             style={{
               height: `${Math.max(8, p * 100)}%`,
-              background: selected ? 'linear-gradient(180deg,#7c5cff,#22d3ee)' : '#2e3752',
+              background: selected ? 'linear-gradient(180deg,#6366f1,#8b5cf6)' : '#2e2e38',
             }}
           />
         ))}
