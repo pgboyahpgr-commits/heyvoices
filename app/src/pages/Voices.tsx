@@ -198,7 +198,7 @@ function VoiceCard({ voice, onUse, onEdit, onDelete }: {
           {voice.kind === 'preset' ? 'Preset' : voice.kind === 'designed' ? 'Designed' : 'Cloned'}
         </span>
         <span className="badge">{langLabel(voice.language)}</span>
-        <span className="badge">{engineLabel(voice.engine)}</span>
+        {engineLabel(voice.engine) && <span className="badge">{engineLabel(voice.engine)}</span>}
         {voice.samples.length > 0 && (
           <span className="badge">{voice.samples.length} sample{voice.samples.length > 1 ? 's' : ''} · {fmtDuration(voice.samples[0]?.duration ?? 0)}</span>
         )}

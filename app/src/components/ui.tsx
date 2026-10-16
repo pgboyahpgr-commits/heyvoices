@@ -18,7 +18,7 @@ export function Avatar({ voice, size = 38 }: { voice: Voice; size?: number }) {
       style={{
         width: size, height: size,
         background: `linear-gradient(135deg, ${voice.color}, ${voice.color}55)`,
-        boxShadow: `0 3px 14px -4px ${voice.color}88`,
+        boxShadow: `inset 0 0 0 1.5px rgba(255,255,255,.16), 0 3px 14px -4px ${voice.color}88`,
         fontSize: size * 0.34,
       }}
     >
@@ -52,7 +52,7 @@ export function Modal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[3px]"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="glass animate-in rounded-2xl shadow-2xl" style={{ width, maxWidth: '92vw', maxHeight: '88vh' }}>
+      <div className="popover animate-pop rounded-2xl" style={{ width, maxWidth: '92vw', maxHeight: '88vh' }}>
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h3 className="text-[15px] font-semibold">{title}</h3>
           <button className="icon-btn" onClick={onClose}><X size={16} /></button>
@@ -132,8 +132,8 @@ export function Toasts() {
 
 export function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
-      <div className="text-fg-dim">{icon}</div>
+    <div className="flex flex-col items-center justify-center gap-2.5 py-14 text-center">
+      <div className="rounded-2xl border border-line bg-white/[0.03] p-3.5 text-fg-dim">{icon}</div>
       <div className="text-[14px] font-medium text-fg-muted">{title}</div>
       {subtitle && <div className="max-w-[420px] text-[12px] text-fg-dim">{subtitle}</div>}
     </div>

@@ -18,6 +18,7 @@ export default function Player() {
   const deleteGen = useApp((s) => s.deleteGen)
   const regenerate = useApp((s) => s.regenerate)
   const playTick = useApp((s) => s.playTick)
+  const voices = useApp((s) => s.voices)
 
   const containerRef = useRef<HTMLDivElement | null>(null)
   const wsRef = useRef<WaveSurfer | null>(null)
@@ -75,19 +76,23 @@ export default function Player() {
 
   if (!gen) return null
 
+  const voiceColor = voices.find((v) => v.id === gen.voice_id)?.color
+
   return (
-    <div className="animate-in border-t border-line bg-ink-850/95 px-5 py-3 backdrop-blur">
+    <div className="animate-in relative border-t border-line px-5 py-3.5 backdrop-blur" style={{ background: 'linear-gradient(180deg, rgba(16,20,34,.72), rgba(10,13,21,.97))' }}>
+      <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-accent/45 to-transparent" />
       <div className="flex items-center gap-4">
         <button
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-transform hover:scale-105 active:scale-95"
-          style={{ background: 'linear-gradient(135deg, #7c5cff, #6d5bff)', boxShadow: '0 4px 18px -4px rgba(124,92,255,.65)' }}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition-transform hover:scale-105 active:scale-95"
+          style={{ background: 'linear-gradient(135deg, #8b6bff, #6d5bff)', boxShadow: '0 6px 22px -6px rgba(124,92,255,.75), inset 0 1px 0 rgba(255,255,255,.25)' }}
           onClick={() => wsRef.current?.playPause()}
         >
-          {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
+          {playing ? <Pause size={19} /> : <Play size={19} className="ml-0.5" />}
         </button>
 
         <div className="min-w-0 flex-1">
           <div className="mb-0.5 flex items-center gap-2">
+            {voiceColor && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: voiceColor, boxShadow: `0 0 8px ${voiceColor}aa` }} />}
             <span className="truncate text-[12.5px] font-semibold">{gen.voice_name}</span>
             <span className="badge badge-accent">{engineLabel(gen.engine)}</span>
             {gen.params?.story && <span className="badge badge-info">story</span>}
@@ -96,7 +101,7 @@ export default function Player() {
           <div ref={containerRef} className="w-full" />
         </div>
 
-        <div className="shrink-0 text-right text-[11px] tabular-nums text-fg-muted">
+        <div className="shrink-0 text-right text-[11.5px] tabular-nums text-fg-muted">
           {fmtDuration(time)} <span className="text-fg-dim">/ {fmtDuration(dur)}</span>
         </div>
 

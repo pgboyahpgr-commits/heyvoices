@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Check, ChevronDown, ChevronRight, Clock, Copy, Download, Dices, Layers, Loader2,
-  Play, RefreshCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
+  Mic, Play, Plus, RefreshCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { fileUrl } from '../lib/api'
@@ -77,18 +77,15 @@ export default function Studio() {
   return (
     <div className="flex flex-col gap-5">
       {/* header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.02em]">Studio</h1>
+          <h1 className="text-[22px] font-bold tracking-[-0.025em]">Studio</h1>
           <p className="mt-0.5 text-[12.5px] text-fg-muted">Type, pick a voice, create. Everything runs on your GPU.</p>
         </div>
         <div className="flex items-center gap-2">
           {loadedList.map((m) => (
             <span key={m} className="badge badge-accent"><Zap size={10} /> {m}</span>
           ))}
-          {info?.gpu.available && (
-            <span className="badge badge-info">GPU {(info.gpu.vram_used_gb ?? 0).toFixed(1)}/{info.gpu.vram_total_gb?.toFixed(0)} GB</span>
-          )}
         </div>
       </div>
 
@@ -105,215 +102,329 @@ export default function Studio() {
         </div>
       )}
 
-      {/* composer */}
-      <div className="panel p-5">
-        <textarea
-          ref={textRef}
-          className="textarea min-h-[150px] border-0 !bg-transparent px-0 pt-0 text-[15px] leading-relaxed focus:!shadow-none"
-          placeholder={'Write or paste your script…\n\nTips: [ [pause:600ms] ] inserts a timed pause · Chatterbox Turbo understands expressive tags like [laugh] or [whisper]'}
-          value={draft.text}
-          onChange={(e) => setDraft({ text: e.target.value })}
-        />
-
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          {chars === 0 ? (
-            <>
-              <span className="text-[11px] text-fg-dim">Try:</span>
-              {TEMPLATES.map((t) => (
-                <button key={t.name} className="chip !py-0.5 !text-[10.5px]" onClick={() => setDraft({ text: t.text })}>
-                  {t.name}
-                </button>
-              ))}
-            </>
-          ) : (
-            <span className="text-[11px] text-fg-dim">
-              Scripts render in chunks with sentence-aware pauses — use <span className="chip !cursor-default !py-0 !text-[10px] font-mono">[[pause:600ms]]</span> anywhere.
-            </span>
-          )}
-          <div className="flex-1" />
-          <span className="text-[11px] tabular-nums text-fg-dim">
-            {chars} chars · {words} words · ~{fmtDuration(estSec)}
-          </span>
+      <div className="grid gap-5 xl:grid-cols-[288px_minmax(0,1fr)]">
+        {/* voice rail (wide screens) */}
+        <div className="hidden xl:block">
+          <VoiceRail />
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-4">
-          <VoicePicker voices={voices} selected={voice} onSelect={(v) => selectVoice(v.id)} />
+        <div className="flex min-w-0 flex-col gap-5">
+          {/* composer */}
+          <div className="panel">
+            {/* target row */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
+              <VoicePicker voices={voices} selected={voice} onSelect={(v) => selectVoice(v.id)} />
 
-          <select
-            className="select !w-auto"
-            value={draft.language}
-            onChange={(e) => setDraft({ language: e.target.value })}
-            title="Language"
-          >
-            {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
-          </select>
-
-          <select
-            className="select !w-auto max-w-[210px]"
-            value={draft.model}
-            onChange={(e) => setDraft({ model: e.target.value })}
-            title="Model (Auto picks the best installed model for the voice)"
-          >
-            <option value="">Auto model</option>
-            {readyModels.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-
-          <div className="flex-1" />
-
-          <button
-            className={clsx('btn', deliveryOpen && 'border-accent/50 text-accent-soft')}
-            onClick={() => setDeliveryOpen(!deliveryOpen)}
-            title="Delivery control"
-          >
-            <Wand2 size={14} /> Delivery
-          </button>
-          <button
-            className={clsx('btn', advancedOpen && 'border-accent/50 text-accent-soft')}
-            onClick={() => setAdvancedOpen(!advancedOpen)}
-          >
-            <SlidersHorizontal size={14} /> Advanced
-          </button>
-
-          <button
-            className="btn btn-primary !px-5 !py-2.5 !text-[13.5px]"
-            disabled={busy || !draft.text.trim()}
-            onClick={() => generate()}
-          >
-            {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-            {busy ? `${Math.round((job?.progress ?? 0) * 100)}%` : 'Generate'}
-            <span className="ml-1 hidden rounded bg-white/20 px-1.5 py-px text-[10px] font-semibold lg:inline">Ctrl↵</span>
-          </button>
-        </div>
-
-        {deliveryOpen && (
-          <div className="animate-in mt-4 rounded-xl border border-line bg-ink-900/60 p-4">
-            {supportsInstruct && (
-              <div className="mb-3">
-                <div className="mb-1.5 flex items-center gap-2 text-[11.5px] font-medium text-fg-muted">
-                  Delivery instruction
-                  <span className="text-[10px] text-fg-dim">(works with Qwen preset voices; cloned voices ignore it)</span>
-                </div>
-                <input
-                  className="input"
-                  placeholder="e.g. speak slowly with warmth"
-                  value={draft.instruct}
-                  onChange={(e) => setDraft({ instruct: e.target.value })}
-                />
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {INSTRUCT_CHIPS.map((c) => (
-                    <button key={c} className="chip" onClick={() => setDraft({ instruct: c })}>{c}</button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {isChatterbox && (
-              <>
-                <Slider
-                  label="Emotion exaggeration"
-                  value={draft.exaggeration} min={0} max={1.5} step={0.05}
-                  onChange={(v) => setDraft({ exaggeration: v })}
-                  format={(v) => v.toFixed(2)}
-                />
-                <div className="mt-3 mb-1.5 text-[11.5px] font-medium text-fg-muted">
-                  Expressive tags <span className="text-[10px] text-fg-dim">(Chatterbox Turbo)</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {TAG_CHIPS.map((t) => (
-                    <button key={t} className="chip font-mono !text-[10.5px]" onClick={() => insertAtCursor(t, textRef.current)}>{t}</button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {advancedOpen && (
-          <div className="animate-in mt-4 grid grid-cols-2 gap-x-8 gap-y-4 rounded-xl border border-line bg-ink-900/60 p-4 lg:grid-cols-3">
-            <Slider label="Temperature" value={draft.temperature} min={0.1} max={1.5} step={0.05}
-              onChange={(v) => setDraft({ temperature: v })} format={(v) => v.toFixed(2)} />
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-[11.5px] font-medium text-fg-muted">Seed</span>
-                <button className="text-fg-dim hover:text-fg" title="Randomize seed" onClick={() => setDraft({ seed: Math.floor(Math.random() * 1e8) })}>
-                  <Dices size={13} />
-                </button>
-              </div>
-              <input
-                className="input !py-1.5" type="number" placeholder="random"
-                value={draft.seed ?? ''}
-                onChange={(e) => setDraft({ seed: e.target.value ? parseInt(e.target.value) : null })}
-              />
-            </div>
-            <div>
-              <div className="mb-1.5 text-[11.5px] font-medium text-fg-muted">Output format</div>
-              <select className="select" value={draft.format} onChange={(e) => setDraft({ format: e.target.value })}>
-                {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
+              <select
+                className="select !w-auto"
+                value={draft.language}
+                onChange={(e) => setDraft({ language: e.target.value })}
+                title="Language"
+              >
+                {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
               </select>
+
+              <select
+                className="select !w-auto max-w-[200px]"
+                value={draft.model}
+                onChange={(e) => setDraft({ model: e.target.value })}
+                title="Model (Auto picks the best installed model for the voice)"
+              >
+                <option value="">Auto model</option>
+                {readyModels.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+
+              <div className="flex-1" />
+
+              {voice && (
+                <span className="hidden text-[11px] text-fg-dim md:inline">
+                  {voice.kind === 'preset'
+                    ? `preset · ${engineLabel(voice.engine)}`
+                    : voice.kind === 'designed'
+                      ? `designed · ${engineLabel(voice.engine)}`
+                      : `cloned · ${voice.samples?.length ?? 0} sample${(voice.samples?.length ?? 0) === 1 ? '' : 's'}`}
+                </span>
+              )}
             </div>
-            <Slider label="Gain" value={draft.effects.gain_db} min={-12} max={12} step={0.5}
-              onChange={(v) => setDraft({ effects: { ...draft.effects, gain_db: v } })} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
-            <Slider label="Pitch" value={draft.effects.pitch_semitones} min={-12} max={12} step={0.5}
-              onChange={(v) => setDraft({ effects: { ...draft.effects, pitch_semitones: v } })} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} st`} />
-            <Slider label="Reverb" value={draft.effects.reverb_mix} min={0} max={1} step={0.05}
-              onChange={(v) => setDraft({ effects: { ...draft.effects, reverb_mix: v } })} format={(v) => `${Math.round(v * 100)}%`} />
-            <div className="col-span-full flex items-center gap-6">
-              <Toggle label="Loudness normalize (−16 LUFS)" checked={draft.normalize} onChange={(v) => setDraft({ normalize: v })} />
-              <Toggle label="Compressor" checked={draft.effects.compressor}
-                onChange={(v) => setDraft({ effects: { ...draft.effects, compressor: v } })} />
+
+            {/* script */}
+            <div className="px-5 pt-4">
+              <textarea
+                ref={textRef}
+                className="textarea min-h-[168px] border-0 !bg-transparent px-0 pt-0 text-[15px] leading-relaxed focus:!shadow-none"
+                placeholder={'Write or paste your script…\n\nTips: [ [pause:600ms] ] inserts a timed pause · Chatterbox understands expressive tags like [laugh] or [whisper]'}
+                value={draft.text}
+                onChange={(e) => setDraft({ text: e.target.value })}
+              />
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 pb-3">
+                {chars === 0 ? (
+                  <>
+                    <span className="text-[11px] text-fg-dim">Try:</span>
+                    {TEMPLATES.map((t) => (
+                      <button key={t.name} className="chip !py-0.5 !text-[10.5px]" onClick={() => setDraft({ text: t.text })}>
+                        {t.name}
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <span className="text-[11px] text-fg-dim">
+                    Scripts render in chunks with sentence-aware pauses — use <span className="chip !cursor-default !py-0 !text-[10px] font-mono">[[pause:600ms]]</span> anywhere.
+                  </span>
+                )}
+                <div className="flex-1" />
+                <span className="text-[11px] tabular-nums text-fg-dim">
+                  {chars} chars · {words} words · ~{fmtDuration(estSec)}
+                </span>
+              </div>
             </div>
+
+            {/* action bar */}
+            <div className={clsx(
+              'flex flex-wrap items-center gap-2 border-t border-line bg-white/[0.015] px-4 py-3',
+              !deliveryOpen && !advancedOpen && 'rounded-b-[15px]',
+            )}>
+              <button
+                className={clsx('btn', deliveryOpen && 'border-accent/50 text-accent-soft')}
+                onClick={() => setDeliveryOpen(!deliveryOpen)}
+                title="Delivery control"
+              >
+                <Wand2 size={14} /> Delivery
+              </button>
+              <button
+                className={clsx('btn', advancedOpen && 'border-accent/50 text-accent-soft')}
+                onClick={() => setAdvancedOpen(!advancedOpen)}
+              >
+                <SlidersHorizontal size={14} /> Advanced
+              </button>
+
+              <div className="flex-1" />
+
+              <button
+                className="btn btn-primary !px-6 !py-2.5 !text-[13.5px]"
+                disabled={busy || !draft.text.trim()}
+                onClick={() => generate()}
+              >
+                {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {busy ? `Generating ${Math.round((job?.progress ?? 0) * 100)}%` : 'Generate'}
+                {!busy && <span className="ml-1 hidden rounded-md bg-white/20 px-1.5 py-px text-[10px] font-semibold lg:inline">Ctrl ↵</span>}
+              </button>
+            </div>
+
+            {deliveryOpen && (
+              <div className={clsx('animate-in border-t border-line px-4 py-4', !advancedOpen && 'rounded-b-[15px]')}>
+                {supportsInstruct && (
+                  <div className="mb-3">
+                    <div className="mb-1.5 flex items-center gap-2 text-[11.5px] font-medium text-fg-muted">
+                      Delivery instruction
+                      <span className="text-[10px] text-fg-dim">(works with Qwen preset voices; cloned voices ignore it)</span>
+                    </div>
+                    <input
+                      className="input"
+                      placeholder="e.g. speak slowly with warmth"
+                      value={draft.instruct}
+                      onChange={(e) => setDraft({ instruct: e.target.value })}
+                    />
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {INSTRUCT_CHIPS.map((c) => (
+                        <button key={c} className="chip" onClick={() => setDraft({ instruct: c })}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isChatterbox && (
+                  <>
+                    <Slider
+                      label="Emotion exaggeration"
+                      value={draft.exaggeration} min={0} max={1.5} step={0.05}
+                      onChange={(v) => setDraft({ exaggeration: v })}
+                      format={(v) => v.toFixed(2)}
+                    />
+                    <div className="mb-1.5 mt-3 text-[11.5px] font-medium text-fg-muted">
+                      Expressive tags <span className="text-[10px] text-fg-dim">(Chatterbox)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {TAG_CHIPS.map((t) => (
+                        <button key={t} className="chip font-mono !text-[10.5px]" onClick={() => insertAtCursor(t, textRef.current)}>{t}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {!supportsInstruct && !isChatterbox && (
+                  <div className="text-[12px] text-fg-dim">
+                    This engine has no delivery controls — pick a Qwen preset voice for instruct, or a Chatterbox voice for emotion.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {advancedOpen && (
+              <div className="animate-in grid grid-cols-2 gap-x-8 gap-y-4 rounded-b-[15px] border-t border-line px-4 py-4 lg:grid-cols-3">
+                <Slider label="Temperature" value={draft.temperature} min={0.1} max={1.5} step={0.05}
+                  onChange={(v) => setDraft({ temperature: v })} format={(v) => v.toFixed(2)} />
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-[11.5px] font-medium text-fg-muted">Seed</span>
+                    <button className="text-fg-dim hover:text-fg" title="Randomize seed" onClick={() => setDraft({ seed: Math.floor(Math.random() * 1e8) })}>
+                      <Dices size={13} />
+                    </button>
+                  </div>
+                  <input
+                    className="input !py-1.5" type="number" placeholder="random"
+                    value={draft.seed ?? ''}
+                    onChange={(e) => setDraft({ seed: e.target.value ? parseInt(e.target.value) : null })}
+                  />
+                </div>
+                <div>
+                  <div className="mb-1.5 text-[11.5px] font-medium text-fg-muted">Output format</div>
+                  <select className="select" value={draft.format} onChange={(e) => setDraft({ format: e.target.value })}>
+                    {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
+                  </select>
+                </div>
+                <Slider label="Gain" value={draft.effects.gain_db} min={-12} max={12} step={0.5}
+                  onChange={(v) => setDraft({ effects: { ...draft.effects, gain_db: v } })} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} dB`} />
+                <Slider label="Pitch" value={draft.effects.pitch_semitones} min={-12} max={12} step={0.5}
+                  onChange={(v) => setDraft({ effects: { ...draft.effects, pitch_semitones: v } })} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} st`} />
+                <Slider label="Reverb" value={draft.effects.reverb_mix} min={0} max={1} step={0.05}
+                  onChange={(v) => setDraft({ effects: { ...draft.effects, reverb_mix: v } })} format={(v) => `${Math.round(v * 100)}%`} />
+                <div className="col-span-full flex items-center gap-6">
+                  <Toggle label="Loudness normalize (−16 LUFS)" checked={draft.normalize} onChange={(v) => setDraft({ normalize: v })} />
+                  <Toggle label="Compressor" checked={draft.effects.compressor}
+                    onChange={(v) => setDraft({ effects: { ...draft.effects, compressor: v } })} />
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* takes */}
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="flex shrink-0 items-center gap-2 text-[15px] font-semibold">
+                <Clock size={15} className="text-fg-dim" /> Takes
+                <span className="badge">{generations.length}</span>
+              </h2>
+              <div className="flex items-center gap-2">
+                <div className="seg">
+                  {([['all', 'All'], ['favorites', 'Starred']] as const).map(([id, label]) => (
+                    <button key={id} data-on={takeFilter === id} onClick={() => setTakeFilter(id)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative w-[210px]">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-dim" />
+                  <input
+                    className="input !py-1.5 !pl-8 !text-[12px]"
+                    placeholder="Search takes…"
+                    value={takeQuery}
+                    onChange={(e) => setTakeQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+            {generations.length === 0 ? (
+              <div className="panel flex flex-col items-center gap-2.5 py-12 text-center">
+                <div className="rounded-2xl border border-line bg-white/[0.03] p-3">
+                  <Layers size={22} className="text-fg-dim" />
+                </div>
+                <div className="text-[13.5px] font-medium text-fg-muted">No takes yet</div>
+                <div className="max-w-[400px] text-[12px] text-fg-dim">
+                  Clone a voice from a short clip on the Voices page, then hit Generate — your audio history will appear here.
+                </div>
+                <button className="btn mt-1" onClick={() => setPage('voices')}>Open Voices</button>
+              </div>
+            ) : filteredGens.length === 0 ? (
+              <div className="panel py-10 text-center text-[12.5px] text-fg-dim">No takes match this filter.</div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {filteredGens.map((g) => (
+                  <TakeRow key={g.id} gen={g} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------ voice rail
+function VoiceRail() {
+  const voices = useApp((s) => s.voices)
+  const selectedVoiceId = useApp((s) => s.selectedVoiceId)
+  const selectVoice = useApp((s) => s.selectVoice)
+  const setPage = useApp((s) => s.setPage)
+  const setIntent = useApp((s) => s.setIntent)
+  const [q, setQ] = useState('')
+
+  const match = (v: Voice) => v.name.toLowerCase().includes(q.trim().toLowerCase())
+  const cloned = voices.filter((v) => v.kind !== 'preset' && match(v))
+  const presets = voices.filter((v) => v.kind === 'preset' && match(v))
+  const openNewVoice = () => { setPage('voices'); setIntent('new-voice') }
+
+  return (
+    <aside className="panel sticky top-4 flex max-h-[calc(100vh-215px)] flex-col">
+      <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-fg-dim">Voices</span>
+        <span className="badge !py-px !text-[9.5px]">{voices.length}</span>
+        <div className="flex-1" />
+        <button className="icon-btn !h-7 !w-7" title="New voice from a clip" onClick={openNewVoice}>
+          <Plus size={14} />
+        </button>
+      </div>
+
+      <div className="px-2.5 pb-1 pt-2.5">
+        <div className="relative">
+          <Search size={12.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-dim" />
+          <input
+            className="input !py-1.5 !pl-8 !text-[12px]"
+            placeholder="Find a voice…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1.5">
+        <RailGroup label="Your voices" voices={cloned} selectedId={selectedVoiceId} onSelect={(v) => selectVoice(v.id)} />
+        <RailGroup label="Presets" voices={presets} selectedId={selectedVoiceId} onSelect={(v) => selectVoice(v.id)} />
+        {cloned.length === 0 && presets.length === 0 && (
+          <div className="px-3 py-6 text-center text-[11.5px] text-fg-dim">No voices match.</div>
         )}
       </div>
 
-      {/* takes */}
-      <div>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="flex shrink-0 items-center gap-2 text-[15px] font-semibold">
-            <Clock size={15} className="text-fg-dim" /> Takes
-            <span className="badge">{generations.length}</span>
-          </h2>
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border border-line bg-ink-850 p-0.5">
-              {([['all', 'All'], ['favorites', 'Starred']] as const).map(([id, label]) => (
-                <button
-                  key={id}
-                  className={clsx('rounded-md px-2.5 py-1 text-[11px] font-medium transition-all',
-                    takeFilter === id ? 'bg-white/[0.08] text-fg' : 'text-fg-dim hover:text-fg-muted')}
-                  onClick={() => setTakeFilter(id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="relative w-[210px]">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-dim" />
-              <input
-                className="input !py-1.5 !pl-8 !text-[12px]"
-                placeholder="Search takes…"
-                value={takeQuery}
-                onChange={(e) => setTakeQuery(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-        {generations.length === 0 ? (
-          <div className="panel flex flex-col items-center gap-2 py-12 text-center">
-            <Layers size={26} className="text-fg-dim" />
-            <div className="text-[13.5px] font-medium text-fg-muted">No takes yet</div>
-            <div className="max-w-[400px] text-[12px] text-fg-dim">
-              Clone a voice from a short clip on the Voices page, then hit Generate — your audio history will appear here.
-            </div>
-          </div>
-        ) : filteredGens.length === 0 ? (
-          <div className="panel py-10 text-center text-[12.5px] text-fg-dim">No takes match this filter.</div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {filteredGens.map((g) => (
-              <TakeRow key={g.id} gen={g} />
-            ))}
-          </div>
-        )}
+      <button
+        className="m-2 mt-0 flex items-center justify-center gap-1.5 rounded-[11px] border border-dashed border-line-strong px-3 py-2 text-[11.5px] text-fg-muted transition-colors hover:border-accent/50 hover:text-fg"
+        onClick={openNewVoice}
+      >
+        <Plus size={13} /> Clone a voice from a clip
+      </button>
+    </aside>
+  )
+}
+
+function RailGroup({ label, voices, selectedId, onSelect }: {
+  label: string; voices: Voice[]; selectedId: string | null; onSelect: (v: Voice) => void
+}) {
+  if (voices.length === 0) return null
+  return (
+    <div className="mb-1">
+      <div className="px-2.5 pb-1 pt-2 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-fg-dim/90">
+        {label} · {voices.length}
       </div>
+      {voices.map((v) => (
+        <button key={v.id} className="rail-item" data-on={selectedId === v.id} onClick={() => onSelect(v)} title={v.description || v.name}>
+          <Avatar voice={v} size={30} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[12.5px] font-medium">{v.name}</div>
+            <div className="truncate text-[10.5px] text-fg-dim">
+              {[langLabel(v.language), engineLabel(v.engine)].filter(Boolean).join(' · ')}
+            </div>
+          </div>
+          {selectedId === v.id && <Check size={13} className="shrink-0 text-accent-soft" />}
+        </button>
+      ))}
     </div>
   )
 }
@@ -332,17 +443,20 @@ function VoicePicker({ voices, selected, onSelect }: {
   return (
     <div className="relative">
       <button
-        className={clsx('btn !py-[7px] !pr-3', open && 'border-accent/50')}
+        className={clsx('btn !py-[6px] !pl-[7px] !pr-2.5', open && 'border-accent/50')}
         onClick={() => setOpen(!open)}
       >
         {selected ? (
           <>
-            <span className="h-5 w-5 rounded-full" style={{ background: `linear-gradient(135deg, ${selected.color}, ${selected.color}55)` }} />
-            <span className="max-w-[160px] truncate">{selected.name}</span>
+            <Avatar voice={selected} size={22} />
+            <span className="max-w-[150px] truncate font-medium">{selected.name}</span>
             <span className="text-[10px] text-fg-dim">{langLabel(selected.language)}</span>
           </>
         ) : (
-          <span className="text-fg-muted">Select a voice…</span>
+          <>
+            <Mic size={14} className="text-fg-dim" />
+            <span className="text-fg-muted">Select a voice…</span>
+          </>
         )}
         <ChevronDown size={13} className="text-fg-dim" />
       </button>
@@ -350,7 +464,7 @@ function VoicePicker({ voices, selected, onSelect }: {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="glass animate-in absolute left-0 top-[calc(100%+6px)] z-40 w-[340px] rounded-xl p-2 shadow-2xl">
+          <div className="popover animate-pop absolute left-0 top-[calc(100%+7px)] z-40 w-[350px] p-2">
             <div className="relative mb-1.5">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-dim" />
               <input
@@ -395,7 +509,9 @@ function Group({ label, voices, selected, onPick }: {
               {v.description || (v.samples.length ? `${v.samples.length} sample${v.samples.length > 1 ? 's' : ''}` : '')}
             </div>
           </div>
-          <span className="badge !text-[9.5px]">{v.engine === 'kokoro' ? 'Kokoro' : v.engine === 'chatterbox' ? 'CB' : 'Qwen'}</span>
+          {v.engine && (
+            <span className="badge !text-[9.5px]">{v.engine === 'kokoro' ? 'Kokoro' : v.engine === 'chatterbox' ? 'CB' : 'Qwen'}</span>
+          )}
           {selected?.id === v.id && <Check size={13} className="text-accent-soft" />}
         </button>
       ))}
@@ -415,29 +531,28 @@ function TakeRow({ gen }: { gen: Generation }) {
   return (
     <div
       className={clsx(
-        'panel panel-hover group flex cursor-pointer items-center gap-3 px-4 py-3 transition-all',
+        'panel panel-hover group flex cursor-pointer items-center gap-3.5 px-4 py-3 transition-all',
         selected && '!border-accent/45 shadow-[0_0_0_1px_rgba(124,92,255,.25)]',
       )}
       onClick={() => selectGen(gen)}
     >
-      <div className="sparkbars flex h-8 w-14 shrink-0 items-end gap-[1.5px]">
-        {gen.peaks.slice(0, 28).map((p, i) => (
-          <div
-            key={i}
-            className="flex-1 rounded-sm"
-            style={{
-              height: `${Math.max(8, p * 100)}%`,
-              background: selected ? 'linear-gradient(180deg,#7c5cff,#22d3ee)' : '#333c5e',
-            }}
-          />
-        ))}
-      </div>
+      <button
+        className={clsx(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all',
+          selected
+            ? 'border-accent/50 bg-accent/15 text-accent-soft'
+            : 'border-line bg-white/[0.03] text-fg-muted hover:border-accent/40 hover:text-accent-soft',
+        )}
+        title="Play"
+        onClick={(e) => { e.stopPropagation(); useApp.getState().playGen(gen) }}
+      >
+        <Play size={13} className="ml-px" />
+      </button>
 
       <div className="min-w-0 flex-1">
         <div className="line-clamp-1 text-[12.5px] text-fg">{gen.text}</div>
-        <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-fg-dim">
-          <span className="font-medium text-fg-muted">{gen.voice_name}</span>
-          <span>·</span>
+        <div className="mt-1 flex items-center gap-2 whitespace-nowrap text-[10.5px] text-fg-dim">
+          <span className="max-w-[150px] truncate font-medium text-fg-muted">{gen.voice_name}</span>
           <span className="badge !py-px !text-[9.5px] badge-accent">{engineLabel(gen.engine)}</span>
           <span>{fmtDuration(gen.duration)}</span>
           <span>·</span>
@@ -446,10 +561,20 @@ function TakeRow({ gen }: { gen: Generation }) {
         </div>
       </div>
 
+      <div className="hidden h-8 w-16 shrink-0 items-end gap-[2px] lg:flex">
+        {gen.peaks.slice(0, 24).map((p, i) => (
+          <div
+            key={i}
+            className="flex-1 rounded-sm"
+            style={{
+              height: `${Math.max(8, p * 100)}%`,
+              background: selected ? 'linear-gradient(180deg,#7c5cff,#22d3ee)' : '#2e3752',
+            }}
+          />
+        ))}
+      </div>
+
       <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-        <button className="icon-btn" title="Play" onClick={(e) => { e.stopPropagation(); useApp.getState().playGen(gen) }}>
-          <Play size={14} />
-        </button>
         <button className="icon-btn" title="Copy text" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(gen.text); toast('info', 'Text copied') }}>
           <Copy size={14} />
         </button>

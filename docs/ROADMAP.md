@@ -29,6 +29,8 @@
 - [x] Pronunciation overrides (Settings → Text & pronunciation, applied before synthesis)
 - [x] Batch v2: zip export of a finished batch
 - [x] Command palette (`Ctrl+K`): navigation + quick actions
+- [x] UI 2.0 refresh: command bar with live GPU/VRAM status, grouped sidebar, Studio voice rail,
+      always-visible take replay, ambient dark theme, page transitions
 - [ ] Audiobook export: chapter splitting, 44.1 kHz re-render, ID3 tags
 - [ ] Text expansion: numbers/dates/units (SSML-lite)
 - [ ] Batch v2 (rest): per-row settings, retries, folder-per-character naming schemes

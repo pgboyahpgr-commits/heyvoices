@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { AudioLines, Loader2 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
+import TopBar from './components/TopBar'
 import Player from './components/Player'
 import CommandPalette from './components/CommandPalette'
 import { Toasts } from './components/ui'
@@ -53,9 +54,10 @@ export default function App() {
   return (
     <div className="flex h-full">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="app-bg flex min-w-0 flex-1 flex-col">
+        <TopBar />
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1120px] px-8 py-7">
+          <div key={page} className="page-in mx-auto w-full max-w-[1240px] px-8 pb-12 pt-7">
             {page === 'studio' && <Studio />}
             {page === 'story' && <Story />}
             {page === 'voices' && <Voices />}

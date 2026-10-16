@@ -47,6 +47,8 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   re-roll with a new seed, download.
 - **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
   open folders…).
+- **Redesigned workspace** — command bar with live GPU/VRAM status, grouped sidebar, and a Studio
+  with a sticky voice rail, always-visible take replay, and a polished player dock.
 - **Local API** — REST + SSE for apps, agents, and stream tooling. `POST /speak` is a one-call
   text-to-audio endpoint.
 - **8 GB VRAM friendly** — one model resident at a time, automatic LRU unloading, bf16, SDPA
