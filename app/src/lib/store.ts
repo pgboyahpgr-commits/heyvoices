@@ -75,6 +75,38 @@ interface State {
 }
 
 let sse: EventSource | null = null
+let sseRetry: number | null = null
+
+type SetPatch = (p: Partial<State> | ((s: State) => Partial<State>)) => void
+
+// SSE drives live job progress. Transient drops retry themselves (browser
+// behavior), but a *fatal* close — e.g. the backend restarted mid-stream —
+// leaves a dead EventSource behind. Without rebuilding it, the status dot
+// would stay "Connecting…" forever, so we recreate it here.
+function connectSSE(set: SetPatch, get: () => State) {
+  if (sse) return
+  sse = new EventSource(api.eventsUrl())
+  sse.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data)
+      handleEvent(msg.type, msg.data, set, get)
+    } catch { /* ignore malformed */ }
+  }
+  sse.onopen = () => set({ connected: true })
+  sse.onerror = () => {
+    set({ connected: false })
+    if (sse && sse.readyState === EventSource.CLOSED) {
+      try { sse.close() } catch { /* already closed */ }
+      sse = null
+      if (sseRetry === null) {
+        sseRetry = window.setTimeout(() => {
+          sseRetry = null
+          connectSSE(set, get)
+        }, 3000)
+      }
+    }
+  }
+}
 let infoTimer: number | null = null
 
 export const useApp = create<State>((set, get) => ({
@@ -131,17 +163,7 @@ export const useApp = create<State>((set, get) => ({
         if (!ok) throw new Error('down')
         set({ ready: true, backendDown: false, connected: true })
         await get().refreshAll()
-        if (!sse) {
-          sse = new EventSource(api.eventsUrl())
-          sse.onmessage = (ev) => {
-            try {
-              const msg = JSON.parse(ev.data)
-              handleEvent(msg.type, msg.data, set, get)
-            } catch { /* ignore malformed */ }
-          }
-          sse.onopen = () => set({ connected: true })
-          sse.onerror = () => set({ connected: false })
-        }
+        connectSSE(set, get)
         if (infoTimer === null) {
           infoTimer = window.setInterval(() => { get().refreshInfo().catch(() => {}) }, 5000)
         }
@@ -174,8 +196,15 @@ export const useApp = create<State>((set, get) => ({
   },
 
   refreshInfo: async () => {
-    const info = await api.info()
-    set({ info })
+    // 5 s heartbeat: also the source of truth for the connection dot, so a
+    // dead SSE stream can never leave the UI stuck on "Connecting…".
+    try {
+      const info = await api.info()
+      set({ info, connected: true, backendDown: false })
+    } catch (err) {
+      set({ connected: false })
+      throw err
+    }
   },
   refreshVoices: async () => set({ voices: await api.voices() }),
   refreshModels: async () => set({ models: (await api.catalog()).models }),
