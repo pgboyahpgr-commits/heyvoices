@@ -78,8 +78,8 @@ class KokoroEngine(EngineBase):
         pipe = self._pipeline(LANG_CODE[lang])
         parts = []
         speed = 1.0
-        if req.temperature is not None:  # reuse temperature slider as speed for kokoro? no - keep 1.0
-            speed = 1.0
+        if req.speed is not None:
+            speed = float(max(0.5, min(2.0, req.speed)))
         for _gs, _ps, audio in pipe(req.text, voice=speaker, speed=speed):
             parts.append(np.asarray(audio, dtype=np.float32))
         if not parts:

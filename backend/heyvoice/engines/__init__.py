@@ -109,6 +109,89 @@ def _hf_repo_dir(repo: str) -> Path:
     return MODELS_DIR / "hf" / "hub" / ("models--" + repo.replace("/", "--"))
 
 
+def model_dir_for(model_id: str) -> Path | None:
+    meta = CATALOG.get(model_id)
+    return _hf_repo_dir(meta["repo"]) if meta else None
+
+
+# ------------------------------------------------- model integrity / repair
+def _manifest_path(model_id: str) -> Path:
+    return MODELS_DIR / f"{model_id}.manifest.json"
+
+
+def _model_files(path: Path) -> dict[str, int]:
+    """Content files worth verifying: HF blob payloads (fall back to everything)."""
+    blobs = path / "blobs"
+    root = blobs if blobs.exists() else path
+    files: dict[str, int] = {}
+    for f in root.rglob("*"):
+        if not f.is_file() or f.name.endswith((".lock", ".incomplete")):
+            continue
+        try:
+            files[str(f.relative_to(path)).replace("\\", "/")] = f.stat().st_size
+        except OSError:
+            pass
+    return files
+
+
+def _write_model_manifest(model_id: str) -> None:
+    import json as _json
+    import time as _time
+
+    path = model_dir_for(model_id)
+    if not path or not path.exists():
+        return
+    try:
+        _manifest_path(model_id).write_text(
+            _json.dumps({"files": _model_files(path),
+                         "recorded_at": _time.strftime("%Y-%m-%dT%H:%M:%S")}),
+            encoding="utf-8")
+    except Exception:
+        pass
+
+
+def verify_model(model_id: str) -> dict:
+    """Check a model against its file manifest (recorded at download time, or
+    captured now as a baseline). Catches files missing/truncated after an
+    interrupted download — repair = re-run the download (HF resumes partials)."""
+    import json as _json
+    import time as _time
+
+    path = model_dir_for(model_id)
+    if not path or not path.exists():
+        return {"ok": False, "reason": "not downloaded", "missing": [], "mismatched": [],
+                "missing_count": 0}
+    current = _model_files(path)
+    manifest = None
+    mp = _manifest_path(model_id)
+    if mp.exists():
+        try:
+            manifest = _json.loads(mp.read_text(encoding="utf-8"))
+        except Exception:
+            manifest = None
+    if not manifest:
+        try:
+            mp.write_text(_json.dumps(
+                {"files": current, "recorded_at": _time.strftime("%Y-%m-%dT%H:%M:%S")}),
+                encoding="utf-8")
+        except Exception:
+            pass
+        return {"ok": True, "baseline": True, "files": len(current),
+                "size_gb": round(sum(current.values()) / 1e9, 2),
+                "missing": [], "mismatched": [], "missing_count": 0}
+    files = manifest.get("files") or {}
+    missing = [rel for rel in files if rel not in current]
+    mismatched = [rel for rel, size in files.items() if rel in current and current[rel] != size]
+    try:
+        incomplete = sum(1 for _ in path.rglob("*.incomplete"))
+    except Exception:
+        incomplete = 0
+    return {"ok": not (missing or mismatched or incomplete), "baseline": False,
+            "files": len(files), "missing": missing[:20], "mismatched": mismatched[:20],
+            "incomplete": incomplete, "missing_count": len(missing) + len(mismatched) + incomplete,
+            "size_gb": round(sum(current.values()) / 1e9, 2)}
+
+
 def model_state(model_id: str) -> dict:
     meta = CATALOG.get(model_id)
     if not meta:

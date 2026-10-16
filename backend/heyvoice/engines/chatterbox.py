@@ -123,14 +123,30 @@ class ChatterboxEngine(EngineBase):
         if self.model is None:
             raise RuntimeError("Chatterbox model not loaded")
         role = MODELS[self.loaded_key]["role"]
+        if req.seed is not None:
+            import torch
+
+            torch.manual_seed(int(req.seed))
         kwargs: dict[str, Any] = {}
         if req.ref_audio:
             kwargs["audio_prompt_path"] = (req.ref_audio[0] if isinstance(req.ref_audio, list)
                                            else req.ref_audio)
         if req.exaggeration is not None:
             kwargs["exaggeration"] = float(max(0.0, min(2.0, req.exaggeration)))
-        if req.temperature is not None:
-            kwargs["temperature"] = float(req.temperature)
+
+        # tuning knobs — only pass what the loaded model's generate() accepts
+        accepted = _generate_params(self.model)
+        def _tune(name: str, value: float | int | None, lo: float, hi: float) -> None:
+            if value is None or (accepted and name not in accepted):
+                return
+            kwargs[name] = type(value)(max(lo, min(hi, float(value))))
+
+        _tune("temperature", req.temperature, 0.05, 2.0)
+        _tune("cfg_weight", req.cfg_weight, 0.0, 1.0)
+        _tune("top_p", req.top_p, 0.0, 1.0)
+        _tune("top_k", req.top_k, 1, 10000)
+        _tune("min_p", req.min_p, 0.0, 1.0)
+        _tune("repetition_penalty", req.repetition_penalty, 1.0, 2.5)
 
         if role == "multilingual":
             lang = LANG_MAP.get(req.language, "en")

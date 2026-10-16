@@ -133,7 +133,10 @@ class Qwen3TTSEngine(EngineBase):
         return prompt
 
     def invalidate_voice(self, voice_key: str) -> None:
-        self._prompt_cache.pop(voice_key, None)
+        # multi-sample prompts are cached under "{voice_id}#{n}" keys too
+        for k in list(self._prompt_cache):
+            if k == voice_key or k.startswith(f"{voice_key}#"):
+                self._prompt_cache.pop(k, None)
 
     # ---- generation ---------------------------------------------------
     def generate(self, req: GenRequest) -> tuple[np.ndarray, int]:
@@ -142,12 +145,27 @@ class Qwen3TTSEngine(EngineBase):
         role = MODELS[self.loaded_key]["role"]
         lang = LANG_MAP.get(req.language, "Auto")
 
+        # sampling knobs — forwarded to the model's generate() as kwargs
+        gen_kwargs: dict[str, Any] = {}
+        if req.temperature is not None:
+            gen_kwargs["temperature"] = float(max(0.05, min(2.0, req.temperature)))
+        if req.top_k is not None:
+            gen_kwargs["top_k"] = int(max(1, min(10000, req.top_k)))
+        if req.top_p is not None:
+            gen_kwargs["top_p"] = float(max(0.0, min(1.0, req.top_p)))
+        if req.repetition_penalty is not None:
+            gen_kwargs["repetition_penalty"] = float(max(1.0, min(2.5, req.repetition_penalty)))
+        if req.seed is not None:
+            import torch
+
+            torch.manual_seed(int(req.seed))
+
         if role == "clone":
             if req.ref_audio:
                 prompt = self.get_clone_prompt(req.voice_key or req.ref_audio,
                                                req.ref_audio, req.ref_text)
                 wavs, sr = self.model.generate_voice_clone(
-                    text=req.text, language=lang, voice_clone_prompt=prompt)
+                    text=req.text, language=lang, voice_clone_prompt=prompt, **gen_kwargs)
             else:
                 raise RuntimeError("A cloned voice with a reference sample is required "
                                    "for the Base model. Add a sample to this voice first.")
@@ -156,12 +174,12 @@ class Qwen3TTSEngine(EngineBase):
                 raise RuntimeError("CustomVoice model needs a preset speaker")
             wavs, sr = self.model.generate_custom_voice(
                 text=req.text, language=lang, speaker=req.speaker,
-                instruct=(req.instruct or None))
+                instruct=(req.instruct or None), **gen_kwargs)
         elif role == "design":
             if not req.instruct:
                 raise RuntimeError("VoiceDesign needs a voice description (instruct)")
             wavs, sr = self.model.generate_voice_design(
-                text=req.text, language=lang, instruct=req.instruct)
+                text=req.text, language=lang, instruct=req.instruct, **gen_kwargs)
         else:
             raise RuntimeError(f"Unknown Qwen3-TTS role {role}")
 

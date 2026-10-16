@@ -268,6 +268,71 @@ def prepare_clone_ref(src: Path, dst: Path, sr: int = 24000,
             "trimmed_silence": trimmed, "capped": capped}
 
 
+def analyze_reference(src: Path) -> dict:
+    """Objective quality metrics for a clone reference clip (pre-normalization).
+
+    Decodes via a lightweight ffmpeg f32le pipe so clipping/peak reflect the
+    *original* recording (to_wav24k() loudness-normalizes, which hides clipping).
+    Heuristic but useful: drives the friendly warnings in the clone wizard.
+    """
+    try:
+        proc = subprocess.run(
+            ["ffmpeg", "-v", "error", "-i", str(src), "-vn", "-ac", "1", "-ar", "24000",
+             "-t", "90", "-f", "f32le", "-"],
+            capture_output=True, check=True)
+        data = np.frombuffer(proc.stdout, dtype=np.float32)
+    except Exception:
+        try:
+            data = np.asarray(load_audio(src)[0], dtype=np.float32)
+        except Exception:
+            return {}
+    if data.size == 0:
+        return {}
+    sr = 24000
+    dur = data.size / sr
+    peak = float(np.max(np.abs(data)))
+    peak_dbfs = 20 * np.log10(max(peak, 1e-6))
+    clipping_pct = float(np.mean(np.abs(data) > 0.985) * 100.0)
+
+    hop = max(1, int(sr * 0.025))
+    n = data.size // hop
+    if n >= 4:
+        frames = np.sqrt(np.mean(np.square(data[: n * hop]).reshape(n, hop), axis=1))
+    else:
+        frames = np.array([float(np.sqrt(np.mean(np.square(data))))])
+    frames_db = 20 * np.log10(np.maximum(frames, 1e-7))
+    noise_db = float(np.percentile(frames_db, 10))
+    speech_db = float(np.percentile(frames_db, 90))
+    snr = speech_db - noise_db
+    speech_ratio = float(np.mean(frames_db > noise_db + 6.0))
+
+    notes: list[str] = []
+    verdict = "good"
+    if dur < 5:
+        notes.append("Clip is short — 10–30 s references clone noticeably more stably.")
+        verdict = "fair"
+    if snr < 12:
+        notes.append(f"Background noise is audible (SNR ≈ {snr:.0f} dB) — a cleaner clip clones better.")
+        verdict = "poor" if snr < 8 else "fair"
+    if clipping_pct > 0.5:
+        notes.append(f"Sound is clipped on {clipping_pct:.1f}% of samples — recorded too loud.")
+        verdict = "fair"
+    if peak_dbfs < -28:
+        notes.append("Recording is very quiet — raise the source volume or pick a louder section.")
+        verdict = "fair"
+    if speech_ratio < 0.35:
+        notes.append(f"Only ~{speech_ratio * 100:.0f}% of the clip is speech — trim music or silence.")
+        verdict = "fair"
+    if not notes:
+        notes.append("Clean single-speaker reference — great for cloning.")
+
+    return {
+        "duration": round(dur, 2), "peak_dbfs": round(peak_dbfs, 1),
+        "snr_db": round(snr, 1), "speech_ratio": round(speech_ratio, 2),
+        "clipping_pct": round(clipping_pct, 2), "verdict": verdict, "notes": notes,
+    }
+
+
 def load_audio(path: Path, sr: int | None = None) -> tuple[np.ndarray, int]:
     import soundfile as sf
 

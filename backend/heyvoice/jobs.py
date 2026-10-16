@@ -2,7 +2,6 @@
 else (UI) talks to it asynchronously and watches progress over SSE."""
 from __future__ import annotations
 
-import queue
 import threading
 import time
 import uuid
@@ -16,17 +15,22 @@ from .engines import CATALOG, ENGINES, get_engine, model_state
 from .engines.base import GenRequest
 
 
+class JobCanceled(Exception):
+    """Raised inside handlers when the user cancels the running job."""
+
+
 class Job:
     def __init__(self, type_: str, label: str, payload: dict) -> None:
         self.id = uuid.uuid4().hex[:12]
         self.type = type_
         self.label = label
         self.payload = payload
-        self.status = "queued"       # queued | running | done | error
+        self.status = "queued"       # queued | running | done | error | canceled
         self.progress = 0.0
         self.note = ""
         self.error: str | None = None
         self.result: Any = None
+        self.canceled = False        # cooperative cancel flag for the running job
         self.done = threading.Event()
         self.created_at = time.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -36,6 +40,11 @@ class Job:
             self.note = note
         events.emit("job", self.to_dict())
 
+    def check_canceled(self) -> None:
+        """Handlers call this between expensive steps to honor cancellations."""
+        if self.canceled:
+            raise JobCanceled()
+
     def to_dict(self) -> dict:
         return {
             "id": self.id, "type": self.type, "label": self.label, "status": self.status,
@@ -44,7 +53,8 @@ class Job:
         }
 
 
-_queue: "queue.Queue[Job]" = queue.Queue()
+_queue: list[Job] = []
+_qcond = threading.Condition()
 JOBS: dict[str, Job] = {}
 _worker_started = False
 
@@ -52,7 +62,9 @@ _worker_started = False
 def submit(type_: str, label: str, **payload: Any) -> Job:
     job = Job(type_, label, payload)
     JOBS[job.id] = job
-    _queue.put(job)
+    with _qcond:
+        _queue.append(job)
+        _qcond.notify_all()
     events.emit("job", job.to_dict())
     return job
 
@@ -61,15 +73,77 @@ def get_job(job_id: str) -> Job | None:
     return JOBS.get(job_id)
 
 
+def active_jobs() -> list[Job]:
+    """Running job first, then queued jobs in execution order."""
+    running = [j for j in JOBS.values() if j.status == "running"]
+    with _qcond:
+        queued = [j for j in _queue if j.status == "queued"]
+    return running + queued
+
+
+def cancel_job(job_id: str) -> str:
+    """Cancel a queued (instant) or running (cooperative) job."""
+    job = JOBS.get(job_id)
+    if job is None:
+        raise KeyError(job_id)
+    if job.status == "queued":
+        job.status = "canceled"
+        job.note = "canceled"
+        job.done.set()
+        events.emit("job", job.to_dict())
+        return "canceled"
+    if job.status == "running":
+        job.canceled = True
+        job.note = "canceling…"
+        events.emit("job", job.to_dict())
+        return "canceling"
+    return job.status
+
+
+def move_job(job_id: str, offset: int) -> bool:
+    """Move a queued job up (-1) or down (+1) in the pending queue."""
+    with _qcond:
+        idx = next((i for i, j in enumerate(_queue)
+                    if j.id == job_id and j.status == "queued"), None)
+        if idx is None:
+            return False
+        target = max(0, min(len(_queue) - 1, idx + (1 if offset > 0 else -1)))
+        if target == idx:
+            return False
+        _queue.insert(target, _queue.pop(idx))
+    events.emit("queue", {"active": [j.to_dict() for j in active_jobs()]})
+    return True
+
+
+def clear_pending() -> int:
+    """Cancel every still-queued job (the running one keeps going)."""
+    with _qcond:
+        pending = [j for j in _queue if j.status == "queued"]
+    for j in pending:
+        j.status = "canceled"
+        j.note = "cleared"
+        j.done.set()
+        events.emit("job", j.to_dict())
+    return len(pending)
+
+
 def _worker() -> None:
     while True:
-        job = _queue.get()
+        with _qcond:
+            while not _queue:
+                _qcond.wait()
+            job = _queue.pop(0)
+        if job.status == "canceled":   # canceled while waiting in the queue
+            continue
         job.status = "running"
         job.set_progress(0.02, "starting")
         try:
             HANDLERS[job.type](job, job.payload)
             job.status = "done"
             job.progress = 1.0
+        except JobCanceled:
+            job.status = "canceled"
+            job.note = "canceled"
         except Exception as exc:  # noqa: BLE001
             job.status = "error"
             job.error = str(exc)
@@ -77,8 +151,13 @@ def _worker() -> None:
 
             print(f"[jobs] {job.type} {job.id} failed: {exc}\n{_tb.format_exc()}", flush=True)
         finally:
+            job.canceled = False
             job.done.set()
             events.emit("job", job.to_dict())
+            try:  # drop the "play so far" preview file if one was written
+                (OUTPUTS_DIR / f"p_{job.id}.wav").unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 def start_worker() -> None:
@@ -199,13 +278,31 @@ def _voice_ref(voice: dict | None) -> tuple[str, list[str] | None, list[str | No
     return speaker, ref_audios, ref_texts, key
 
 
+def _write_partial(job: Job, parts: list, pauses: list[int], sr: int, settings: dict) -> None:
+    """Write a 'play so far' preview of a multi-part render (best effort)."""
+    if not parts:
+        return
+    try:
+        from .audio import save_wav
+
+        so_far = stitch(parts, sr, int(settings["crossfade_ms"]), pauses)
+        path = OUTPUTS_DIR / f"p_{job.id}.wav"
+        save_wav(path, so_far, sr)
+        events.emit("partial", {"job_id": job.id, "file": path.name,
+                                "seconds": round(len(so_far) / sr, 2)})
+    except Exception:
+        pass
+
+
 def h_generate(job: Job, p: dict) -> None:
     settings = load_settings()
+    job.check_canceled()
     voice = store.get_voice(p["voice_id"]) if p.get("voice_id") else None
     engine_id, model_key = resolve_engine(voice, p.get("engine"), p.get("model"),
                                           design=bool(p.get("design")))
     ensure_model(engine_id, model_key)
     engine = get_engine(engine_id)
+    job.check_canceled()
 
     text = (p.get("text") or "").strip()
     if not text:
@@ -224,10 +321,14 @@ def h_generate(job: Job, p: dict) -> None:
     pauses: list[int] = []
     sr = 24000
     for i, ch in enumerate(chunks):
+        job.check_canceled()
         req = GenRequest(
             text=ch["text"], language=language, instruct=p.get("instruct", ""),
             exaggeration=p.get("exaggeration"), speaker=speaker,
             temperature=p.get("temperature"), seed=p.get("seed"),
+            cfg_weight=p.get("cfg_weight"), top_p=p.get("top_p"), top_k=p.get("top_k"),
+            min_p=p.get("min_p"), repetition_penalty=p.get("repetition_penalty"),
+            speed=p.get("speed"),
             ref_audio=ref_audio, ref_text=ref_text, voice_key=voice_key,
         )
         audio, sr = engine.generate(req)
@@ -238,7 +339,10 @@ def h_generate(job: Job, p: dict) -> None:
             pauses.append(ch["pause_before_ms"])
         job.set_progress(0.05 + 0.80 * (i + 1) / len(chunks),
                          f"chunk {i + 1}/{len(chunks)}")
+        if len(chunks) > 1:
+            _write_partial(job, parts, pauses, sr, settings)
 
+    job.check_canceled()
     job.set_progress(0.88, "stitching")
     full = stitch(parts, sr, int(settings["crossfade_ms"]), pauses)
     full = trim_silence(full, sr)
@@ -264,11 +368,14 @@ def h_generate(job: Job, p: dict) -> None:
     fmt = (p.get("output_format") or settings["output_format"] or "wav").lower()
     final = export_audio(master, OUTPUTS_DIR / f"{gid}.{fmt}", fmt)
 
+    tuning = {k: p.get(k) for k in ("temperature", "cfg_weight", "top_p", "top_k",
+                                    "min_p", "repetition_penalty", "speed")
+              if p.get(k) is not None}
     gen = store.add_generation(
         id_=gid, voice_id=(voice or {}).get("id", ""), voice_name=(voice or {}).get("name", "Voice design"),
         text=text, engine=engine_id, model=model_key, language=language,
         params={"instruct": p.get("instruct", ""), "exaggeration": p.get("exaggeration"),
-                "effects": fx, "format": fmt},
+                "effects": fx, "format": fmt, "tuning": tuning},
         file=final.name, duration=duration_of(master), peaks=compute_peaks(full),
         batch_id=p.get("batch_id", ""),
     )
@@ -282,6 +389,7 @@ def h_story(job: Job, p: dict) -> None:
     lines = [l for l in (p.get("lines") or []) if (l.get("text") or "").strip()]
     if not lines:
         raise RuntimeError("A story needs at least one line")
+    job.check_canceled()
 
     parts = []
     pauses: list[int] = []
@@ -292,6 +400,7 @@ def h_story(job: Job, p: dict) -> None:
     total = len(lines)
 
     for li, line in enumerate(lines):
+        job.check_canceled()
         text = _apply_pronunciations((line.get("text") or "").strip(), settings)
         voice = store.get_voice(line["voice_id"]) if line.get("voice_id") else None
         if not voice:
@@ -313,6 +422,9 @@ def h_story(job: Job, p: dict) -> None:
                 exaggeration=(line.get("exaggeration") if line.get("exaggeration") is not None
                               else p.get("exaggeration")),
                 speaker=speaker, temperature=p.get("temperature"), seed=None,
+                cfg_weight=p.get("cfg_weight"), top_p=p.get("top_p"), top_k=p.get("top_k"),
+                min_p=p.get("min_p"), repetition_penalty=p.get("repetition_penalty"),
+                speed=p.get("speed"),
                 ref_audio=ref_audio, ref_text=ref_text, voice_key=voice_key,
             )
             audio, s = engine.generate(req)
@@ -334,9 +446,12 @@ def h_story(job: Job, p: dict) -> None:
                 "duration": round(line_seconds, 3),
             })
         job.set_progress(0.04 + 0.82 * (li + 1) / total, f"line {li + 1}/{total}")
+        if total > 1:
+            _write_partial(job, parts, pauses, sr, settings)
 
     if not parts:
         raise RuntimeError("Engines returned no audio for this story")
+    job.check_canceled()
 
     job.set_progress(0.88, "stitching")
     # exact per-line timeline (mirrors stitch(): pauses add, crossfades overlap)
@@ -393,12 +508,16 @@ def h_story(job: Job, p: dict) -> None:
         if s["voice_name"] not in names:
             names.append(s["voice_name"])
     label = " + ".join(names[:3]) + (f" +{len(names) - 3}" if len(names) > 3 else "")
+    tuning = {k: p.get(k) for k in ("temperature", "cfg_weight", "top_p", "top_k",
+                                    "min_p", "repetition_penalty", "speed")
+              if p.get(k) is not None}
     gen = store.add_generation(
         id_=gid, voice_id="", voice_name=label or "Story",
         text="\n".join(s["text"] for s in segments),
         engine="multi", model="story", language=p.get("language") or "auto",
         params={"story": True, "lines": lines, "segments": segments,
-                "line_timings": line_timings, "effects": fx, "format": fmt},
+                "line_timings": line_timings, "effects": fx, "format": fmt,
+                "tuning": tuning},
         file=final.name, duration=duration_of(master), peaks=compute_peaks(full),
         batch_id=p.get("batch_id", ""),
     )
@@ -411,8 +530,10 @@ def h_transcribe(job: Job, p: dict) -> None:
 
     job.set_progress(0.2, "loading whisper")
     asr.load(size=p.get("size", "small"))
+    job.check_canceled()
     job.set_progress(0.5, "transcribing")
     text = asr.transcribe(p["path"], language=p.get("language"))
+    job.check_canceled()
     job.result = {"text": text}
     job.set_progress(1.0, "done")
 
@@ -428,6 +549,6 @@ def transcribe_sync(path: str, size: str = "small", timeout: int = 240) -> str:
     job = submit("transcribe", "Transcribe", path=str(path), size=size)
     if not job.done.wait(timeout):
         raise RuntimeError("Transcription timed out")
-    if job.status == "error":
-        raise RuntimeError(job.error or "Transcription failed")
+    if job.status in ("error", "canceled"):
+        raise RuntimeError(job.error or "Transcription canceled")
     return (job.result or {}).get("text", "")

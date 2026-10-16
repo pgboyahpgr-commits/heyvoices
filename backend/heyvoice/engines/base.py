@@ -28,6 +28,13 @@ class GenRequest:
     speaker: str = ""
     seed: Optional[int] = None
     temperature: Optional[float] = None
+    # engine tuning knobs (only applied by engines that support them)
+    cfg_weight: Optional[float] = None          # chatterbox: classifier-free guidance
+    top_p: Optional[float] = None
+    top_k: Optional[int] = None
+    min_p: Optional[float] = None               # chatterbox
+    repetition_penalty: Optional[float] = None
+    speed: Optional[float] = None               # kokoro
     # voice reference (engine-specific, prepared by resolve logic below)
     ref_audio: Optional[Union[str, list[str]]] = None   # prepared 24k wav sample path(s)
     ref_text: Optional[Union[str, list[Optional[str]]]] = None

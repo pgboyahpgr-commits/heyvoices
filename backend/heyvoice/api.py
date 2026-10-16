@@ -15,10 +15,11 @@ from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 
 from . import events, jobs, store
-from .audio import duration_of, prepare_clone_ref, to_wav24k
+from .audio import analyze_reference, duration_of, prepare_clone_ref, to_wav24k
 from .config import (MODELS_DIR, OUTPUTS_DIR, UPLOADS_DIR, VERSION, VOICES_DIR,
                      load_settings, save_settings)
-from .engines import CATALOG, ENGINES, disk_free_gb, get_engine, list_catalog, model_state, unload_all
+from .engines import (CATALOG, ENGINES, disk_free_gb, get_engine, list_catalog,
+                      model_state, unload_all, verify_model, _write_model_manifest)
 
 router = APIRouter()
 
@@ -61,8 +62,35 @@ def system_info() -> dict:
         "outputs_dir": str(OUTPUTS_DIR),
         "disk_free_gb": disk_free_gb(),
         "settings": load_settings(),
-        "jobs_active": [j.to_dict() for j in jobs.JOBS.values() if j.status in ("queued", "running")],
+        "jobs_active": [j.to_dict() for j in jobs.active_jobs()],
     }
+
+
+# torch import is expensive; remember when it is unavailable so the 2 s VRAM
+# telemetry poll stays cheap on machines without CUDA.
+_torch_missing = False
+
+
+@router.get("/system/vram")
+def system_vram() -> dict:
+    global _torch_missing
+    if not _torch_missing:
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                free, total = torch.cuda.mem_get_info()
+                return {
+                    "available": True,
+                    "total_gb": round(total / 1024**3, 2),
+                    "free_gb": round(free / 1024**3, 2),
+                    "used_gb": round((total - free) / 1024**3, 2),
+                    "alloc_gb": round(torch.cuda.memory_allocated() / 1024**3, 2),
+                    "reserved_gb": round(torch.cuda.memory_reserved() / 1024**3, 2),
+                }
+        except Exception:
+            _torch_missing = True
+    return {"available": False}
 
 
 @router.get("/system/events")
@@ -111,14 +139,10 @@ def models_catalog() -> dict:
 _downloads: dict[str, threading.Thread] = {}
 
 
-@router.post("/models/download")
-def models_download(body: dict) -> dict:
-    model_id = body.get("id", "")
-    meta = CATALOG.get(model_id)
-    if not meta:
-        raise HTTPException(404, f"Unknown model {model_id}")
+def _start_model_download(model_id: str, meta: dict) -> bool:
+    """Spawn a resumable HF snapshot download (also used for repairs)."""
     if model_id in _downloads and _downloads[model_id].is_alive():
-        return {"started": False, "reason": "already downloading"}
+        return False
 
     def _run() -> None:
         from huggingface_hub import snapshot_download
@@ -126,6 +150,7 @@ def models_download(body: dict) -> dict:
         try:
             events.emit("model", model_state(model_id))
             snapshot_download(meta["repo"])
+            _write_model_manifest(model_id)
             events.emit("model", model_state(model_id))
         except Exception as exc:  # noqa: BLE001
             events.emit("model_error", {"id": model_id, "error": str(exc)})
@@ -133,6 +158,40 @@ def models_download(body: dict) -> dict:
     t = threading.Thread(target=_run, name=f"dl-{model_id}", daemon=True)
     _downloads[model_id] = t
     t.start()
+    return True
+
+
+@router.post("/models/download")
+def models_download(body: dict) -> dict:
+    model_id = body.get("id", "")
+    meta = CATALOG.get(model_id)
+    if not meta:
+        raise HTTPException(404, f"Unknown model {model_id}")
+    if not _start_model_download(model_id, meta):
+        return {"started": False, "reason": "already downloading"}
+    return {"started": True, "id": model_id}
+
+
+@router.post("/models/verify")
+def models_verify(body: dict) -> dict:
+    """Compare a downloaded model against its file manifest (first run records
+    a baseline). Catches files lost to interrupted downloads."""
+    model_id = body.get("id", "")
+    if model_id not in CATALOG:
+        raise HTTPException(404, f"Unknown model {model_id}")
+    return verify_model(model_id)
+
+
+@router.post("/models/repair")
+def models_repair(body: dict) -> dict:
+    """Re-run the download — huggingface_hub skips complete files and resumes
+    partial ones, so only missing/truncated data is fetched."""
+    model_id = body.get("id", "")
+    meta = CATALOG.get(model_id)
+    if not meta:
+        raise HTTPException(404, f"Unknown model {model_id}")
+    if not _start_model_download(model_id, meta):
+        return {"started": False, "reason": "already downloading"}
     return {"started": True, "id": model_id}
 
 
@@ -313,6 +372,9 @@ async def voices_ingest(files: list[UploadFile] = File(...),
             entry["trimmed_silence"] = True
         if prep.get("capped"):
             entry["capped"] = True
+        if prep["ok"]:
+            # objective reference-quality metrics on the *original* (pre-normalization)
+            entry["analysis"] = await asyncio.to_thread(analyze_reference, raw)
         if prep["ok"] and transcribe:
             size = load_settings().get("transcribe_size", "small")
             try:
@@ -321,6 +383,59 @@ async def voices_ingest(files: list[UploadFile] = File(...),
                 entry["transcript_error"] = str(exc)
         out.append(entry)
     return out
+
+
+class RetranscribeIn(BaseModel):
+    upload_id: str | None = None
+    voice_id: str | None = None
+    sample_id: str | None = None
+    size: str = "turbo"
+    language: str | None = None
+
+
+@router.post("/voices/re-transcribe")
+async def voices_retranscribe(body: RetranscribeIn) -> dict:
+    """Re-run ASR with a bigger Whisper model. Works on a fresh upload (clone
+    wizard) or on a stored voice sample, where it updates the transcript in place.
+
+    'turbo' = large-v3-turbo: dramatically better transcripts on names/numbers
+    at ~8x realtime on a 4060; downloads once (~1.5 GB) into the models folder.
+    """
+    from .engines.whisper_asr import SIZES
+
+    size = body.size if body.size in SIZES else "turbo"
+    voice = None
+    if body.voice_id and body.sample_id:
+        voice = store.get_voice(body.voice_id)
+        if not voice:
+            raise HTTPException(404, "Voice not found")
+        sample = next((s for s in voice.get("samples", []) if s.get("id") == body.sample_id), None)
+        if not sample:
+            raise HTTPException(404, "Sample not found")
+        path = VOICES_DIR / body.voice_id / sample["file"]
+        if not path.exists():
+            raise HTTPException(404, "Sample file missing")
+    elif body.upload_id:
+        path = UPLOADS_DIR / f"{body.upload_id}.wav"
+        if not path.exists():
+            raise HTTPException(404, "Upload not found — please upload again")
+    else:
+        raise HTTPException(400, "upload_id or voice_id + sample_id is required")
+
+    try:
+        text = await asyncio.to_thread(jobs.transcribe_sync, str(path), size, 900)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(500, f"Transcription failed: {exc}") from exc
+
+    if voice is not None:
+        samples = [({**s, "transcript": text} if s.get("id") == body.sample_id else s)
+                   for s in voice.get("samples", [])]
+        updated = store.update_voice(body.voice_id, {"samples": samples})
+        for e in ENGINES.values():
+            if hasattr(e, "invalidate_voice"):
+                e.invalidate_voice(body.voice_id)  # type: ignore[attr-defined]
+        events.emit("voices", {"action": "updated", "voice": updated})
+    return {"transcript": text, "size": size}
 
 
 # ================================================================ generation
@@ -334,6 +449,13 @@ class GenerateIn(BaseModel):
     exaggeration: float | None = None
     temperature: float | None = None
     seed: int | None = None
+    # engine tuning knobs (auto → None)
+    cfg_weight: float | None = None
+    top_p: float | None = None
+    top_k: int | None = None
+    min_p: float | None = None
+    repetition_penalty: float | None = None
+    speed: float | None = None
     normalize: bool | None = None
     effects: dict = {}
     output_format: str | None = None
@@ -359,6 +481,12 @@ class StoryIn(BaseModel):
     instruct: str = ""
     exaggeration: float | None = None
     temperature: float | None = None
+    cfg_weight: float | None = None
+    top_p: float | None = None
+    top_k: int | None = None
+    min_p: float | None = None
+    repetition_penalty: float | None = None
+    speed: float | None = None
     normalize: bool | None = None
     effects: dict = {}
     output_format: str | None = None
@@ -383,8 +511,37 @@ def job_status(job_id: str) -> dict:
 
 
 @router.get("/jobs")
-def jobs_list() -> list[dict]:
+def jobs_list(active: bool = False) -> list[dict]:
+    if active:
+        return [j.to_dict() for j in jobs.active_jobs()]
     return [j.to_dict() for j in jobs.JOBS.values()]
+
+
+@router.post("/jobs/{job_id}/cancel")
+def job_cancel(job_id: str) -> dict:
+    """Queued jobs cancel instantly; the running job stops at the next safe step."""
+    try:
+        status = jobs.cancel_job(job_id)
+    except KeyError:
+        raise HTTPException(404, "Job not found") from None
+    return {"id": job_id, "status": status}
+
+
+class JobMove(BaseModel):
+    offset: int = -1
+
+
+@router.post("/jobs/{job_id}/move")
+def job_move(job_id: str, body: JobMove) -> dict:
+    if not jobs.get_job(job_id):
+        raise HTTPException(404, "Job not found")
+    return {"ok": jobs.move_job(job_id, body.offset)}
+
+
+@router.post("/jobs/clear")
+def jobs_clear() -> dict:
+    """Cancel every queued job (the running one keeps going)."""
+    return {"cleared": jobs.clear_pending()}
 
 
 @router.get("/generations")
