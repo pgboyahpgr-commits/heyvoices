@@ -1,0 +1,42 @@
+{
+  "name": "heyvoice-app",
+  "private": true,
+  "version": "0.1.0",
+  "description": "HeyVoice — fully-local AI voice studio (ElevenLabs-style, on your own GPU)",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k -n ui,app -c cyan,magenta \"vite\" \"wait-on tcp:127.0.0.1:5173 && electron .\"",
+    "dev:ui": "vite",
+    "dev:backend": "..\\backend\\.venv\\Scripts\\python.exe -m heyvoice",
+    "build:ui": "vite build",
+    "build": "vite build && electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.1.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.452.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "wavesurfer.js": "^7.8.6",
+    "zustand": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "appId": "sh.heyvoice.studio",
+    "productName": "HeyVoice",
+    "files": ["dist/**", "electron/**"],
+    "win": { "target": "nsis" }
+  }
+}

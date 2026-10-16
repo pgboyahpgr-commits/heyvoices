@@ -1,0 +1,21 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/setup.log
+
+# Node
+app/node_modules/
+app/dist/
+app/release/
+
+# Models & data (gigabytes — never commit)
+models/
+data/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

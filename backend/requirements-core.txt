@@ -1,0 +1,22 @@
+# HeyVoice core runtime (torch/torchaudio installed separately from the CUDA index)
+# NOTE: chatterbox-tts is intentionally NOT here — it pins transformers==5.2.0 while
+# qwen-tts pins transformers==4.57.3. It is installed separately with --no-deps
+# (see scripts/fix_install.ps1).
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pydantic>=2.7
+soundfile>=0.12.1
+numpy>=1.26
+scipy>=1.11
+librosa>=0.10.2
+huggingface_hub>=0.34,<1.0
+accelerate>=0.33
+faster-whisper>=1.0.3
+pedalboard>=0.9.12
+pyloudnorm>=0.1.1
+tqdm>=4.66
+qwen-tts
+kokoro>=0.9.4
+misaki[en]>=0.8
+loguru
