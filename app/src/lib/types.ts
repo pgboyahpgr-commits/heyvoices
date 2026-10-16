@@ -106,6 +106,9 @@ export interface IngestResult {
   duration: number
   transcript: string
   transcript_error?: string
+  source?: 'audio' | 'video'
+  trimmed_silence?: boolean
+  capped?: boolean
 }
 
 export interface EffectsOptions {

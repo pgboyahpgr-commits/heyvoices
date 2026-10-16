@@ -24,8 +24,9 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
 
 ## Features
 
-- **Voice cloning** — drop 5–30 s of clean speech; Whisper auto-transcribes it and Qwen3-TTS or
-  Chatterbox clones the timbre. Reusable forever, no per-use cost.
+- **Voice cloning** — drop 5–30 s of clean speech **as audio or video** (mp4/mov/mkv/webm — the
+  audio track is extracted with FFmpeg, silence-trimmed and normalized); Whisper auto-transcribes
+  it and Qwen3-TTS or Chatterbox clones the timbre. Reusable forever, no per-use cost.
 - **Voice design** — describe a voice in words ("calm middle-aged male, slightly husky") and
   generate it, then save the result as a clonable voice.
 - **Story mode** — write multi-speaker scripts: every line gets its own voice, pause length and

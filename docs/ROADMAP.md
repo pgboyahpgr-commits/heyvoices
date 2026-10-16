@@ -19,6 +19,9 @@
 
 ## Phase 1 — Engine core hardening
 - [ ] Multi-sample cloning (average/select the best prompt)
+- [x] Clone from audio **or video** clips: FFmpeg extracts the audio track (mp4/mov/mkv/webm/avi…),
+      edge silence trimmed, loudness-normalized, capped at 60 s; reference is auditionable in the
+      wizard (`/files/uploads`) before creating the voice
 - [ ] Streaming playback for Qwen (97 ms first-packet streaming path)
 - [ ] Per-engine parameter surface in the UI (auto-shown based on capabilities)
 - [ ] Model integrity checks + resume-aware download UI

@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import events
 from .api import router, seed_presets
-from .config import HOST, OUTPUTS_DIR, PORT, VERSION, VOICES_DIR
+from .config import HOST, OUTPUTS_DIR, PORT, UPLOADS_DIR, VERSION, VOICES_DIR
 from .jobs import start_worker
 
 app = FastAPI(title="HeyVoice", version=VERSION)
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(router)
 app.mount("/files/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 app.mount("/files/voices", StaticFiles(directory=str(VOICES_DIR)), name="voices")
+app.mount("/files/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 @app.on_event("startup")

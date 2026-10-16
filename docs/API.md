@@ -70,11 +70,13 @@ Array of voice objects:
 ```
 
 ### `POST /voices/ingest` — *multipart*
-Fields: `files` (one or more audio files), `transcribe` (bool, default true).
-Converts anything ffmpeg can read to 24 kHz mono, loudness-normalized, then Whisper-transcribes.
+Fields: `files` (one or more **audio or video** files), `transcribe` (bool, default true).
+FFmpeg extracts the audio track from video containers (mp4/mov/mkv/webm/avi…), converts to
+24 kHz mono, loudness-normalizes, trims edge silence and caps at 60 s, then Whisper-transcribes.
+The cleaned reference is playable at `GET /files/uploads/{upload_id}.wav`.
 ```json
-[{ "upload_id": "3c1f...", "filename": "clip.mp3", "converted": true,
-   "duration": 14.2, "transcript": "…" }]
+[{ "upload_id": "3c1f...", "filename": "clip.mp4", "converted": true, "source": "video",
+   "duration": 29.4, "transcript": "…", "trimmed_silence": true }]
 ```
 
 ### `POST /voices`

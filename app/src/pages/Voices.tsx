@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Check, ChevronRight, CircleDashed, Loader2, Mic, Pencil, Play, Plus, Search, Sparkles,
+  Check, ChevronRight, CircleDashed, Film, Loader2, Mic, Pencil, Play, Plus, Search, Sparkles,
   Square, Trash2, Upload, UserRound, Wand2, X, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -72,7 +72,7 @@ export default function Voices() {
         <div>
           <h1 className="text-[22px] font-bold tracking-[-0.02em]">Voices</h1>
           <p className="mt-0.5 text-[12.5px] text-fg-muted">
-            {clonedCount} cloned · {voices.length - clonedCount} presets — clone from as little as 5 seconds of audio
+            {clonedCount} cloned · {voices.length - clonedCount} presets — clone from as little as 5 seconds of audio or video
           </p>
         </div>
         <div className="flex gap-2">
@@ -247,6 +247,30 @@ function VoiceCard({ voice, onUse, onEdit, onDelete }: {
 }
 
 // ------------------------------------------------------------------ new voice wizard
+// Tiny inline player so you can hear exactly the cleaned reference that will be cloned.
+function RefPreview({ src }: { src: string }) {
+  const [playing, setPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const toggle = () => {
+    const a = audioRef.current
+    if (!a) return
+    if (playing) { a.pause(); setPlaying(false) }
+    else {
+      a.currentTime = 0
+      a.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+    }
+  }
+  return (
+    <>
+      <button className="icon-btn !h-6 !w-6" onClick={toggle} title="Audition the cleaned reference">
+        {playing ? <Square size={10} className="fill-current" /> : <Play size={11} />}
+      </button>
+      <audio ref={audioRef} src={src} preload="none" onEnded={() => setPlaying(false)} />
+    </>
+  )
+}
+
+
 function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useApp((s) => s.toast)
   const [step, setStep] = useState(0)
@@ -279,6 +303,8 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
       setSamples((s) => [...s, ...results])
       const failed = results.filter((r) => !r.converted)
       if (failed.length) toast('error', `${failed.length} file(s) could not be converted`)
+      else if (results.some((r) => r.source === 'video'))
+        toast('success', 'Video processed — audio extracted + transcribed')
       else toast('success', 'Audio processed — transcript ready')
     } catch (e: any) {
       toast('error', 'Ingest failed: ' + e.message)
@@ -346,7 +372,7 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
     <Modal open={open} onClose={onClose} title="Clone a new voice" width={660}>
       {/* steps */}
       <div className="mb-5 flex items-center gap-2">
-        {['Add audio', 'Details', 'Test'].map((label, i) => (
+        {['Add clip', 'Details', 'Test'].map((label, i) => (
           <div key={label} className="flex items-center gap-2">
             <div className={clsx('flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold',
               i === step ? 'bg-accent/20 text-accent-soft' : i < step ? 'bg-ok/15 text-ok' : 'bg-white/[0.05] text-fg-dim')}>
@@ -366,15 +392,16 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
             onDrop={(e) => { e.preventDefault(); ingestFiles(Array.from(e.dataTransfer.files)) }}
           >
             <input
-              type="file" className="hidden" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm"
+              type="file" className="hidden"
+              accept="audio/*,video/mp4,video/quicktime,video/webm,.mp4,.mov,.mkv,.m4v,.avi,.mp3,.wav,.m4a,.ogg,.flac,.webm"
               multiple
               onChange={(e) => e.target.files && ingestFiles(Array.from(e.target.files))}
             />
             {ingesting ? <Loader2 size={22} className="animate-spin text-accent-soft" /> : <Upload size={22} className="text-fg-dim" />}
             <div className="text-[13px] font-medium">
-              {ingesting ? 'Converting + transcribing with Whisper…' : 'Drop audio here or click to browse'}
+              {ingesting ? 'Extracting audio + transcribing with Whisper…' : 'Drop audio or video here — or click to browse'}
             </div>
-            <div className="text-[11px] text-fg-dim">WAV / MP3 / M4A / OGG / WebM · 5–30 s clean single-speaker audio works best</div>
+            <div className="text-[11px] text-fg-dim">WAV / MP3 / M4A / MP4 / MOV / MKV · 5–30 s clean single-speaker clip works best</div>
           </label>
 
           <div className="flex items-center gap-3">
@@ -395,10 +422,17 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
               {samples.map((s, i) => (
                 <div key={s.upload_id} className="rounded-xl border border-line bg-ink-900/60 p-3">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[12px] font-medium">{s.filename} · {fmtDuration(s.duration)}</span>
-                    <button className="icon-btn !h-6 !w-6" onClick={() => setSamples((all) => all.filter((_, j) => j !== i))}>
-                      <X size={12} />
-                    </button>
+                    <span className="flex min-w-0 items-center gap-2 text-[12px] font-medium">
+                      <span className="truncate">{s.filename} · {fmtDuration(s.duration)}</span>
+                      {s.source === 'video' && <span className="badge badge-info"><Film size={9} /> video</span>}
+                      {s.trimmed_silence && <span className="badge" title="Edge silence was trimmed for a cleaner clone">trimmed</span>}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <RefPreview src={`${BASE}/files/uploads/${s.upload_id}.wav`} />
+                      <button className="icon-btn !h-6 !w-6" onClick={() => setSamples((all) => all.filter((_, j) => j !== i))}>
+                        <X size={12} />
+                      </button>
+                    </div>
                   </div>
                   <textarea
                     className="textarea !text-[12px]"

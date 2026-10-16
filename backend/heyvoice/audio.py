@@ -227,21 +227,43 @@ def export_audio(src_wav: Path, dst: Path, fmt: str) -> Path:
 
 
 def to_wav24k(src: Path, dst: Path, sr: int = 24000) -> bool:
-    """Convert any audio file (webm/opus/mp3/m4a...) to mono wav via ffmpeg."""
+    """Convert any audio *or video* file (webm/opus/mp3/m4a/mp4/mov/mkv...) to mono wav
+    via ffmpeg. Video streams are stripped; the best audio track is used."""
     dst.parent.mkdir(parents=True, exist_ok=True)
+    base = ["ffmpeg", "-y", "-i", str(src), "-vn"]
     try:
         subprocess.run(
-            ["ffmpeg", "-y", "-i", str(src), "-ac", "1", "-ar", str(sr),
+            [*base, "-ac", "1", "-ar", str(sr),
              "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", str(dst)],
             check=True, capture_output=True)
         return True
     except Exception:
         try:  # loudnorm on very short clips can fail; retry without it
-            subprocess.run(["ffmpeg", "-y", "-i", str(src), "-ac", "1", "-ar", str(sr), str(dst)],
+            subprocess.run([*base, "-ac", "1", "-ar", str(sr), str(dst)],
                            check=True, capture_output=True)
             return True
         except Exception:
             return False
+
+
+def prepare_clone_ref(src: Path, dst: Path, sr: int = 24000,
+                      max_seconds: float = 60.0) -> dict:
+    """Turn any uploaded audio/video file into a clean 24 kHz mono clone reference:
+    extract the audio track via ffmpeg, trim edge silence, cap length. Returns metadata."""
+    if not to_wav24k(src, dst, sr):
+        return {"ok": False, "duration": 0.0, "trimmed_silence": False, "capped": False}
+    data, _ = load_audio(dst, sr)
+    clean = trim_silence(data, sr, thresh_db=-50.0, pad_ms=120.0)
+    trimmed = clean.size != data.size
+    capped = False
+    limit = int(max_seconds * sr)
+    if clean.size > limit:
+        clean = clean[:limit]
+        capped = True
+    if trimmed or capped:
+        save_wav(dst, clean, sr)
+    return {"ok": True, "duration": round(clean.size / sr, 3),
+            "trimmed_silence": trimmed, "capped": capped}
 
 
 def load_audio(path: Path, sr: int | None = None) -> tuple[np.ndarray, int]:

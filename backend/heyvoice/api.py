@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from . import events, jobs, store
-from .audio import duration_of, to_wav24k
+from .audio import duration_of, prepare_clone_ref, to_wav24k
 from .config import (MODELS_DIR, OUTPUTS_DIR, UPLOADS_DIR, VERSION, VOICES_DIR,
                      load_settings, save_settings)
 from .engines import CATALOG, ENGINES, disk_free_gb, get_engine, list_catalog, model_state, unload_all
@@ -287,21 +287,32 @@ def voices_delete(voice_id: str) -> dict:
     return {"ok": True}
 
 
+VIDEO_EXTS = {".mp4", ".mov", ".mkv", ".m4v", ".avi", ".webm", ".mpg", ".mpeg",
+              ".wmv", ".flv", ".ts", ".3gp", ".ogv"}
+
+
 @router.post("/voices/ingest")
 async def voices_ingest(files: list[UploadFile] = File(...),
                         transcribe: bool = Form(True)) -> list[dict]:
-    """Upload raw audio (wav/mp3/m4a/webm...), convert to 24k mono, optionally
-    auto-transcribe with Whisper (greatly improves clone quality)."""
+    """Upload raw audio *or video* (wav/mp3/m4a/webm/mp4/mov/mkv...). FFmpeg extracts and
+    cleans the audio track (edge silence trimmed, capped at 60 s), then optionally
+    auto-transcribes with Whisper (greatly improves clone quality)."""
     out = []
     for f in files:
         upload_id = uuid.uuid4().hex[:12]
-        raw = UPLOADS_DIR / f"{upload_id}_{Path(f.filename or 'audio').name}"
+        src_name = Path(f.filename or "audio").name
+        raw = UPLOADS_DIR / f"{upload_id}_{src_name}"
         raw.write_bytes(await f.read())
         wav = UPLOADS_DIR / f"{upload_id}.wav"
-        ok = to_wav24k(raw, wav)
-        entry = {"upload_id": upload_id, "filename": f.filename, "converted": ok,
-                 "duration": duration_of(wav) if ok else 0.0, "transcript": ""}
-        if ok and transcribe:
+        prep = await asyncio.to_thread(prepare_clone_ref, raw, wav)
+        entry = {"upload_id": upload_id, "filename": f.filename, "converted": prep["ok"],
+                 "duration": prep["duration"], "transcript": "",
+                 "source": "video" if Path(src_name).suffix.lower() in VIDEO_EXTS else "audio"}
+        if prep.get("trimmed_silence"):
+            entry["trimmed_silence"] = True
+        if prep.get("capped"):
+            entry["capped"] = True
+        if prep["ok"] and transcribe:
             size = load_settings().get("transcribe_size", "small")
             try:
                 entry["transcript"] = await asyncio.to_thread(jobs.transcribe_sync, str(wav), size, 300)
