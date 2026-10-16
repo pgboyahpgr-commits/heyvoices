@@ -53,6 +53,11 @@
 
 ## Phase 4 — Packaging & polish
 - [ ] Single-file installer (NSIS) with embedded Python runtime — no dev tools needed
+  - [x] NSIS installer bundles the backend source; first launch auto-installs the Python env
+        (uv-managed 3.12 + dependencies + model prefetch — internet once) and stores everything in
+        `%APPDATA%\HeyVoice`; packaged app verified end-to-end on hardware (spawns its own backend
+        with user-dir data/models)
+  - [ ] Fully offline install: Python wheels + models bundled in the installer
 - [ ] Auto-updates, crash reports stored locally
 - [ ] First-run model picker tuned per GPU
 

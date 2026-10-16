@@ -84,6 +84,18 @@ First launch: open **Models** and download the recommended set
 (Qwen3-TTS 0.6B Base, Chatterbox, Kokoro ≈ 3 GB total). Then open **Voices → New voice**,
 drop in a short clip, and hit **Generate** in the Studio.
 
+### Install it (no dev tools)
+
+Build the installer with `cd app; npm run build` → `app\dist\HeyVoice Setup 0.1.0.exe`
+(≈165 MB, NSIS, per-user install). It bundles the backend source; on first launch the app
+offers to set up its voice engine — it installs a private Python 3.12 (via `uv`, downloading
+one if the system has none), all dependencies, and prefetches the flagship model
+(~4 GB total, internet needed once, 10–30 min). A PowerShell window shows the progress.
+
+Everything user-level lives in `%APPDATA%\HeyVoice` (Python env, models, voices, outputs),
+so app updates and reinstalls never touch your library. `ffmpeg` must be on PATH
+(`winget install Gyan.FFmpeg`) — it powers video-clip cloning and MP3/M4B export.
+
 ## Project structure
 
 ```

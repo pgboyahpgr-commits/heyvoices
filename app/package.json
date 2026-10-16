@@ -2,6 +2,7 @@
   "name": "heyvoice-app",
   "private": true,
   "version": "0.1.0",
+  "productName": "HeyVoice",
   "description": "HeyVoice — fully-local AI voice studio (ElevenLabs-style, on your own GPU)",
   "main": "electron/main.cjs",
   "scripts": {
@@ -35,8 +36,20 @@
   },
   "build": {
     "appId": "sh.heyvoice.studio",
-    "productName": "HeyVoice",
     "files": ["dist/**", "electron/**"],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!.venv/**",
+          "!.venv",
+          "!**/__pycache__/**",
+          "!**/*.log"
+        ]
+      }
+    ],
     "win": { "target": "nsis", "icon": "build/icon.ico" }
   }
 }

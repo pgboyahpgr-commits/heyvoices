@@ -402,6 +402,11 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
               {ingesting ? 'Extracting audio + transcribing with Whisper…' : 'Drop audio or video here — or click to browse'}
             </div>
             <div className="text-[11px] text-fg-dim">WAV / MP3 / M4A / MP4 / MOV / MKV · 5–30 s clean single-speaker clip works best</div>
+            {samples.length > 0 && samples.length < 3 && (
+              <div className="text-[11px] text-accent-soft/90">
+                Tip: add up to 3 clips of the same speaker — they get blended into one sharper clone.
+              </div>
+            )}
           </label>
 
           <div className="flex items-center gap-3">
