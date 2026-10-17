@@ -83,6 +83,7 @@ interface State {
   renderStory: (opts?: { lines?: StoryLine[]; format?: string }) => Promise<string | null>
   patchGen: (id: string, patch: Record<string, any>) => Promise<void>
   deleteGen: (id: string) => Promise<void>
+  deleteGens: (ids: string[]) => Promise<void>
   regenerate: (id: string) => Promise<void>
 }
 
@@ -256,7 +257,15 @@ export const useApp = create<State>((set, get) => ({
       throw err
     }
   },
-  refreshVoices: async () => set({ voices: await api.voices() }),
+  refreshVoices: async () => {
+    const voices = await api.voices()
+    set((s) => {
+      // if the selected voice was deleted, fall back to the first clone, then any preset
+      if (s.selectedVoiceId && voices.some((v) => v.id === s.selectedVoiceId)) return { voices }
+      const firstCloned = voices.find((v) => v.kind !== 'preset')
+      return { voices, selectedVoiceId: (firstCloned || voices[0])?.id ?? null }
+    })
+  },
   refreshModels: async () => set({ models: (await api.catalog()).models }),
   refreshGenerations: async () => set({ generations: await api.generations() }),
 
@@ -355,6 +364,11 @@ export const useApp = create<State>((set, get) => ({
   deleteGen: async (id) => {
     await api.deleteGeneration(id)
     if (get().selectedGen?.id === id) set({ selectedGen: null })
+    await get().refreshGenerations()
+  },
+  deleteGens: async (ids) => {
+    for (const id of ids) await api.deleteGeneration(id)
+    if (get().selectedGen && ids.includes(get().selectedGen!.id)) set({ selectedGen: null })
     await get().refreshGenerations()
   },
   regenerate: async (id) => {

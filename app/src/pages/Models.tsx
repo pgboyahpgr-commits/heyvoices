@@ -188,7 +188,7 @@ function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () =
           </span>
           <span className="whitespace-nowrap">{m.size_gb} GB download</span>
           {m.vram_gb > 0 && <span className="whitespace-nowrap">≈ {m.vram_gb} GB VRAM</span>}
-          <span className="whitespace-nowrap">{m.languages.length} languages</span>
+          <span className="whitespace-nowrap">{m.languages.length} language{m.languages.length === 1 ? '' : 's'}</span>
         </div>
         {m.state === 'downloading' && (
           <div className="mt-2 h-[5px] w-full max-w-[420px] overflow-hidden rounded-full bg-ink-700">

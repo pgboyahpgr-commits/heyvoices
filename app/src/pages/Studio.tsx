@@ -64,12 +64,13 @@ const ENGINE_TUNING: Record<string, TuneSpec[]> = {
 
 export default function Studio() {
   const { voices, models, generations, selectedVoiceId, selectVoice, draft, setDraft,
-    job, generate, generateVariants, partial, info, setPage } = useApp()
+    job, generate, generateVariants, partial, info, setPage, deleteGens, toast } = useApp()
   const textRef = useRef<HTMLTextAreaElement | null>(null)
   const [deliveryOpen, setDeliveryOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [takeQuery, setTakeQuery] = useState('')
   const [takeFilter, setTakeFilter] = useState<'all' | 'favorites'>('all')
+  const [clearOpen, setClearOpen] = useState(false)
 
   const voice = voices.find((v) => v.id === selectedVoiceId) || null
   const readyModels = models.filter((m) => m.state === 'ready' || m.state === 'loaded')
@@ -115,6 +116,14 @@ export default function Studio() {
     if (q) list = list.filter((g) => (g.text + ' ' + g.voice_name).toLowerCase().includes(q))
     return list
   }, [generations, takeFilter, takeQuery])
+
+  const unstarred = useMemo(() => generations.filter((g) => !g.favorite), [generations])
+  const clearTakes = async (ids: string[]) => {
+    if (!ids.length) return
+    setClearOpen(false)
+    await deleteGens(ids)
+    toast('info', `Deleted ${ids.length} take${ids.length === 1 ? '' : 's'}`)
+  }
 
   const engineOf = (id: string) => models.find((m) => m.id === id)?.name ?? id
 
@@ -434,6 +443,40 @@ export default function Studio() {
                     onChange={(e) => setTakeQuery(e.target.value)}
                   />
                 </div>
+                {generations.length > 0 && (
+                  <div className="relative">
+                    <button
+                      className={clsx('icon-btn', clearOpen && '!bg-white/[0.08] !text-fg')}
+                      title="Clear takes…"
+                      onClick={() => setClearOpen(!clearOpen)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    {clearOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setClearOpen(false)} />
+                        <div className="popover animate-pop absolute right-0 top-full z-50 mt-1.5 w-[240px] p-1.5">
+                          <button
+                            className="menu-row w-full disabled:cursor-not-allowed disabled:opacity-40"
+                            disabled={unstarred.length === 0}
+                            onClick={() => clearTakes(unstarred.map((g) => g.id))}
+                          >
+                            <Trash2 size={13} /> Delete {unstarred.length} unstarred
+                          </button>
+                          <button
+                            className="menu-row w-full !text-danger hover:!bg-danger/10"
+                            onClick={() => clearTakes(generations.map((g) => g.id))}
+                          >
+                            <Trash2 size={13} /> Delete all {generations.length} takes
+                          </button>
+                          <div className="px-2.5 pb-1 pt-1.5 text-[10.5px] leading-snug text-fg-dim">
+                            The first option keeps your starred takes.
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             {generations.length === 0 ? (

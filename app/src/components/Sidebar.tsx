@@ -91,6 +91,8 @@ export default function Sidebar() {
 
   // ---- job queue popover ----
   const [queueOpen, setQueueOpen] = useState(false)
+  // close the popover when navigating so it never lingers over the next page
+  useEffect(() => { setQueueOpen(false) }, [page])
   const active = info?.jobs_active ?? []
   const running = active.filter((j) => j.status === 'running')
   const queued = active.filter((j) => j.status === 'queued')

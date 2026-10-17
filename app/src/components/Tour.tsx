@@ -201,7 +201,7 @@ export default function Tour() {
             top: rect.y - pad,
             width: rect.w + pad * 2,
             height: rect.h + pad * 2,
-            boxShadow: '0 0 0 9999px rgba(7, 9, 11, 0.74), 0 0 0 1px rgba(20, 184, 166, 0.55)',
+            boxShadow: '0 0 0 9999px rgba(7, 9, 11, 0.78), 0 0 0 1px rgba(20, 184, 166, 0.9), 0 0 22px 3px rgba(20, 184, 166, 0.30)',
           }}
         />
       ) : (

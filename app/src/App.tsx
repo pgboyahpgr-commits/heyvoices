@@ -47,9 +47,16 @@ export default function App() {
             {backendDown ? 'Waiting for the local engine to come online…' : 'Starting local engine…'}
           </div>
           <div className="mt-3 max-w-[380px] text-[11px] leading-relaxed text-fg-dim">
-            First launch can take a moment while the backend boots. If this persists, run
-            <span className="mx-1 rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px]">npm run dev:backend</span>
-            in the app folder, or check <span className="font-mono text-[10px]">backend\setup.log</span>.
+            First launch can take a moment while the backend boots. If this persists, check{' '}
+            <span className="font-mono text-[10px]">backend\setup.log</span>
+            {import.meta.env.DEV && (
+              <>
+                , or run{' '}
+                <span className="mx-1 rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px]">npm run dev:backend</span>
+                in the app folder
+              </>
+            )}
+            .
           </div>
         </div>
         <Toasts />
