@@ -48,6 +48,9 @@
       always-visible take replay, ambient dark theme, page transitions
 - [x] UI 3.0 polish: professional graphite + indigo palette (no neon glows), custom SVG brand mark
       (app icon + favicon + animated splash), SVG empty-state illustrations, softer shadows/rings
+- [x] UI 4.0 redesign: warm graphite + amber palette (pro-audio console feel, no neon), ink-on-amber
+      brand mark across sidebar/splash/favicon/installer icon, warm ambient glows, focus rings and
+      selection accents to match
 - [x] Audiobook & subtitle export: per-take **.srt** (exact per-line timings for Story renders,
       sentence-weighted approximation otherwise; batch ZIPs include each take's .srt), 44.1 kHz
       **.m4b** with per-line chapter marks + tags, and 44.1 kHz **.mp3** with ID3v2 tags — all in

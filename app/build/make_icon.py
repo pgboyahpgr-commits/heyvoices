@@ -14,8 +14,8 @@ from PIL import Image, ImageDraw
 
 S = 1024
 GRID = 48.0            # design grid of the SVG mark
-TILE_TOP = (0x6F, 0x72, 0xF5)
-TILE_BOT = (0x8B, 0x5C, 0xF6)
+TILE_TOP = (0xFB, 0xBF, 0x24)
+TILE_BOT = (0xF9, 0x73, 0x16)
 
 OUT = Path(__file__).resolve().parent
 
@@ -56,11 +56,11 @@ def main() -> None:
         width=max(2, round(k / 5)),
     )
 
-    # waveform bars (x, y, height, alpha) from brand.tsx
+    # waveform bars (x, y, height, alpha) from brand.tsx — deep ink on amber
     bars = [
-        (11.8, 19, 10, 224),
+        (11.8, 19, 10, 209),
         (21.6, 13, 22, 255),
-        (31.4, 17, 14, 240),
+        (31.4, 17, 14, 229),
     ]
     bw = round(4.8 * k)
     for bx, by, bh, alpha in bars:
@@ -68,7 +68,7 @@ def main() -> None:
         d.rounded_rectangle(
             [x0, y0, x0 + bw - 1, y0 + round(bh * k) - 1],
             radius=bw // 2,
-            fill=(255, 255, 255, alpha),
+            fill=(0x25, 0x16, 0x03, alpha),
         )
 
     img.resize((512, 512), Image.LANCZOS).save(OUT / "icon.png")

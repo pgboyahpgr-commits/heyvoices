@@ -17,8 +17,8 @@ export function LogoMark({
     >
       <defs>
         <linearGradient id="hv-logo-tile" x1="8" y1="4" x2="42" y2="45" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6f72f5" />
-          <stop offset="1" stopColor="#8b5cf6" />
+          <stop stopColor="#fbbf24" />
+          <stop offset="1" stopColor="#f97316" />
         </linearGradient>
       </defs>
 
@@ -28,9 +28,9 @@ export function LogoMark({
 
       {/* waveform bars */}
       <g className="logo-wave" data-animated={animated ? 'true' : undefined}>
-        <rect x="11.8" y="19" width="4.8" height="10" rx="2.4" fill="#fff" opacity="0.88" />
-        <rect x="21.6" y="13" width="4.8" height="22" rx="2.4" fill="#fff" />
-        <rect x="31.4" y="17" width="4.8" height="14" rx="2.4" fill="#fff" opacity="0.94" />
+        <rect x="11.8" y="19" width="4.8" height="10" rx="2.4" fill="#251603" opacity="0.82" />
+        <rect x="21.6" y="13" width="4.8" height="22" rx="2.4" fill="#251603" />
+        <rect x="31.4" y="17" width="4.8" height="14" rx="2.4" fill="#251603" opacity="0.9" />
       </g>
     </svg>
   )

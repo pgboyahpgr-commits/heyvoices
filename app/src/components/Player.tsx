@@ -40,8 +40,8 @@ export default function Player() {
       container: containerRef.current,
       height: 46,
       url: fileUrl(gen.file),
-      waveColor: '#2e2e38',
-      progressColor: '#6366f1',
+      waveColor: '#3a3020',
+      progressColor: '#f59e0b',
       cursorColor: 'rgba(255,255,255,0.25)',
       cursorWidth: 1,
       barWidth: 2,
@@ -100,7 +100,7 @@ export default function Player() {
     `&artist=${encodeURIComponent(gen.voice_name)}`
 
   return (
-    <div className="animate-in relative border-t border-line px-5 py-3.5 backdrop-blur" style={{ background: 'linear-gradient(180deg, rgba(22,22,28,.78), rgba(12,12,16,.97))' }}>
+    <div className="animate-in relative border-t border-line px-5 py-3.5 backdrop-blur" style={{ background: 'linear-gradient(180deg, rgba(29,25,18,.78), rgba(15,13,10,.97))' }}>
       <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-accent/35 to-transparent" />
       {variants.length > 1 && (
         <div className="mb-2.5 flex items-center gap-1.5">
@@ -135,8 +135,8 @@ export default function Player() {
       )}
       <div className="flex items-center gap-4">
         <button
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition-transform hover:scale-105 active:scale-95"
-          style={{ background: 'linear-gradient(180deg, #6f72f5, #5d60ea)', boxShadow: '0 1px 2px rgba(0,0,0,.4), 0 8px 22px -8px rgba(80,83,214,.8), inset 0 1px 0 rgba(255,255,255,.2)' }}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[#251603] transition-transform hover:scale-105 active:scale-95"
+          style={{ background: 'linear-gradient(180deg, #fbbf24, #f59e0b)', boxShadow: '0 1px 2px rgba(0,0,0,.4), 0 8px 22px -8px rgba(245,158,11,.8), inset 0 1px 0 rgba(255,255,255,.25)' }}
           onClick={() => wsRef.current?.playPause()}
         >
           {playing ? <Pause size={19} /> : <Play size={19} className="ml-0.5" />}

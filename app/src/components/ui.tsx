@@ -1,7 +1,7 @@
 // Small shared UI building blocks.
 import React, { useEffect } from 'react'
 import clsx from 'clsx'
-import { X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
 import { useApp } from '../lib/store'
 import type { Voice } from '../lib/types'
 
@@ -12,11 +12,17 @@ export function Avatar({ voice, size = 38 }: { voice: Voice; size?: number }) {
     .slice(0, 2)
     .join('')
     .toUpperCase()
+  // pick ink or white initials based on the swatch luminance (amber/yellow need dark text)
+  const c = voice.color.replace('#', '')
+  const lum = c.length >= 6
+    ? (0.2126 * parseInt(c.slice(0, 2), 16) + 0.7152 * parseInt(c.slice(2, 4), 16) + 0.0722 * parseInt(c.slice(4, 6), 16)) / 255
+    : 0.3
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
+      className="flex shrink-0 items-center justify-center rounded-full font-semibold"
       style={{
         width: size, height: size,
+        color: lum > 0.62 ? '#251603' : '#fff',
         background: `linear-gradient(135deg, ${voice.color}, ${voice.color}55)`,
         boxShadow: `inset 0 0 0 1.5px rgba(255,255,255,.16), 0 3px 12px -5px ${voice.color}66`,
         fontSize: size * 0.34,
@@ -116,14 +122,23 @@ export function Toasts() {
         <div
           key={t.id}
           className={clsx(
-            'animate-in pointer-events-auto max-w-[380px] rounded-xl border px-3.5 py-2.5 text-[12.5px] shadow-xl backdrop-blur',
-            t.kind === 'success' && 'border-ok/30 bg-[#0d1a16]/90 text-ok',
-            t.kind === 'error' && 'border-danger/30 bg-[#1d0f14]/90 text-danger',
+            'animate-in pointer-events-auto flex max-w-[380px] items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-[12.5px] shadow-xl backdrop-blur',
+            t.kind === 'success' && 'border-ok/30 bg-[#0a201b]/90 text-fg',
+            t.kind === 'error' && 'border-danger/30 bg-[#251119]/90 text-fg',
             t.kind === 'info' && 'border-line-strong bg-ink-800/90 text-fg',
           )}
-          onClick={() => dismiss(t.id)}
         >
-          {t.message}
+          {t.kind === 'success' && <CheckCircle2 size={14} className="mt-px shrink-0 text-ok" />}
+          {t.kind === 'error' && <AlertTriangle size={14} className="mt-px shrink-0 text-danger" />}
+          {t.kind === 'info' && <Info size={14} className="mt-px shrink-0 text-accent-soft" />}
+          <span className="flex-1">{t.message}</span>
+          <button
+            className="-mr-1.5 -mt-1 rounded-md p-0.5 text-fg-dim transition-colors hover:!text-fg"
+            title="Dismiss"
+            onClick={() => dismiss(t.id)}
+          >
+            <X size={12} />
+          </button>
         </div>
       ))}
     </div>

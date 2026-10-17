@@ -640,7 +640,7 @@ function TakeRow({ gen }: { gen: Generation }) {
     <div
       className={clsx(
         'panel panel-hover group flex cursor-pointer items-center gap-3.5 px-4 py-3 transition-all',
-        selected && '!border-accent/45 shadow-[0_0_0_1px_rgba(99,102,241,.3)]',
+        selected && '!border-accent/45 shadow-[0_0_0_1px_rgba(245,158,11,.32)]',
       )}
       onClick={() => selectGen(gen)}
     >
@@ -676,7 +676,7 @@ function TakeRow({ gen }: { gen: Generation }) {
             className="flex-1 rounded-sm"
             style={{
               height: `${Math.max(8, p * 100)}%`,
-              background: selected ? 'linear-gradient(180deg,#6366f1,#8b5cf6)' : '#2e2e38',
+              background: selected ? 'linear-gradient(180deg,#f59e0b,#f97316)' : '#3a3020',
             }}
           />
         ))}

@@ -1,4 +1,4 @@
-// HeyVoice Electron main process — hosts the UI and auto-starts the Python backend.
+﻿// HeyVoice Electron main process â€” hosts the UI and auto-starts the Python backend.
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
@@ -71,11 +71,11 @@ async function ensureBackend() {
     if (!fs.existsSync(p.python)) {
       const { response } = await dialog.showMessageBox({
         type: 'info',
-        title: 'HeyVoice — first run',
+        title: 'HeyVoice â€” first run',
         message: 'Setting up the voice engine',
         detail:
           'HeyVoice needs to install its Python environment and download the voice models ' +
-          'on first launch.\n\nAbout 4 GB of downloads, 10–30 minutes, internet required. ' +
+          'on first launch.\n\nAbout 4 GB of downloads, 10â€“30 minutes, internet required. ' +
           'A PowerShell window will show the progress. This only happens once.\n\n' +
           `Environment: ${p.venvDir}\nModels: ${p.modelsDir}`,
         buttons: ['Set up now', 'Quit'],
@@ -140,7 +140,7 @@ function createWindow() {
     height: 960,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#0E0E12',
+    backgroundColor: '#0F0D0A',
     icon: fs.existsSync(DEV_ICON) ? DEV_ICON : undefined,
     autoHideMenuBar: true,
     title: 'HeyVoice',

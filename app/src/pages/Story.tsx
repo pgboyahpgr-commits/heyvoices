@@ -110,8 +110,8 @@ export default function Story() {
   return (
     <div className="flex flex-col gap-5">
       {/* header */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-[280px] flex-1">
           <h1 className="flex items-center gap-2 text-[22px] font-bold tracking-[-0.02em]">
             <BookOpen size={20} className="text-accent-soft" /> Story
           </h1>
@@ -119,7 +119,7 @@ export default function Story() {
             Multi-speaker scripts — every line its own voice and pacing, rendered into one stitched track.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <span className="hidden text-[11.5px] tabular-nums text-fg-dim xl:block">
             {activeCount} line{activeCount === 1 ? '' : 's'} · {chars} chars · ~{fmtDuration(estSec)}
           </span>

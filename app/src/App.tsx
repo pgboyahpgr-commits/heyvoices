@@ -29,7 +29,7 @@ export default function App() {
   if (!ready) {
     return (
       <div className="app-bg flex h-full flex-col items-center justify-center gap-5">
-        <div style={{ filter: 'drop-shadow(0 10px 32px rgba(99,102,241,0.4))' }}>
+        <div style={{ filter: 'drop-shadow(0 10px 32px rgba(245,158,11,0.35))' }}>
           <LogoMark size={64} animated />
         </div>
         <div className="text-center">

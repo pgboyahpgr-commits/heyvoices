@@ -187,8 +187,8 @@ export default function TopBar() {
             <svg width="46" height="16" className="ml-0.5" aria-hidden>
               <defs>
                 <linearGradient id="vram-grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="100%" stopColor="#8b5cf6" />
+                  <stop offset="0%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#f97316" />
                 </linearGradient>
               </defs>
               <polyline points={spark} fill="none" stroke="url(#vram-grad)" strokeWidth="1.5" strokeLinejoin="round" />

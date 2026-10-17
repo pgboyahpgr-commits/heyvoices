@@ -46,10 +46,10 @@ export default function Sidebar() {
   const cloned = voices.filter((v) => v.kind !== 'preset').length
 
   return (
-    <aside className="flex h-full w-[228px] shrink-0 flex-col border-r border-line" style={{ background: 'linear-gradient(180deg, #101014 0%, #0a0a0d 100%)' }}>
+    <aside className="flex h-full w-[228px] shrink-0 flex-col border-r border-line" style={{ background: 'linear-gradient(180deg, #17130e 0%, #0c0a07 100%)' }}>
       {/* logo */}
       <div className="flex items-center gap-2.5 px-4 pb-2 pt-5">
-        <div style={{ filter: 'drop-shadow(0 4px 14px rgba(99,102,241,0.35))' }}>
+        <div style={{ filter: 'drop-shadow(0 4px 14px rgba(245,158,11,0.30))' }}>
           <LogoMark size={36} />
         </div>
         <div>
@@ -80,7 +80,7 @@ export default function Sidebar() {
                     )}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-accent to-accent-2 shadow-[0_0_8px_rgba(99,102,241,.5)]" />
+                      <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-accent to-accent-2 shadow-[0_0_8px_rgba(245,158,11,.55)]" />
                     )}
                     <span className={clsx('transition-colors', active ? 'text-accent-soft' : 'text-fg-dim group-hover:text-fg-muted')}>
                       {item.icon}
@@ -121,8 +121,8 @@ export default function Sidebar() {
                 className="h-full rounded-full transition-all duration-700"
                 style={{
                   width: `${Math.max(2, pct)}%`,
-                  background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
-                  boxShadow: '0 0 8px rgba(99,102,241,.35)',
+                  background: 'linear-gradient(90deg, #f59e0b, #f97316)',
+                  boxShadow: '0 0 8px rgba(245,158,11,.35)',
                 }}
               />
             </div>

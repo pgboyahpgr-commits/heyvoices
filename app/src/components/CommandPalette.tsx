@@ -158,6 +158,14 @@ export default function CommandPalette() {
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-3 border-t border-line px-3.5 py-2">
+          <span className="kbd">↑ ↓</span><span className="text-[10.5px] text-fg-dim">navigate</span>
+          <span className="kbd">↵</span><span className="text-[10.5px] text-fg-dim">run</span>
+          <span className="kbd">esc</span><span className="text-[10.5px] text-fg-dim">close</span>
+          <span className="ml-auto flex items-center gap-1.5 text-[10.5px] text-fg-dim">
+            <Sparkles size={11} className="text-accent-soft" /> HeyVoice
+          </span>
+        </div>
       </div>
     </div>
   )

@@ -60,16 +60,16 @@ export default function Models() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <h1 className="text-[22px] font-bold tracking-[-0.02em]">Models</h1>
           <p className="mt-0.5 text-[12.5px] text-fg-muted">
             Download once, run forever. Models are stored inside the project ({info?.disk_free_gb} GB free disk).
           </p>
         </div>
-        <div className="flex gap-2">
-          <button className="btn" onClick={openFolder}><FolderOpen size={14} /> Models folder</button>
-          <button className="btn" onClick={unloadAll}><HardDrive size={14} /> Unload all from VRAM</button>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn" onClick={openFolder} title="Open the folder where model weights are stored"><FolderOpen size={14} /> Models folder</button>
+          <button className="btn" onClick={unloadAll} title="Free GPU memory — models reload automatically when needed"><HardDrive size={14} /> Unload VRAM</button>
         </div>
       </div>
 
@@ -79,15 +79,15 @@ export default function Models() {
         const meta = ENGINE_INFO[engineId]
         return (
           <div key={engineId} className="panel overflow-hidden">
-            <div className="flex items-center justify-between gap-4 border-b border-line bg-white/[0.015] px-5 py-3.5">
-              <div className="min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line bg-white/[0.015] px-5 py-3.5">
+              <div className="min-w-[220px] flex-1">
                 <div className="flex items-center gap-2">
                   <Box size={15} className="shrink-0 text-accent-soft" />
                   <span className="whitespace-nowrap text-[14.5px] font-semibold">{engineLabel(engineId)}</span>
                 </div>
                 <div className="mt-0.5 text-[11.5px] text-fg-dim">{meta?.tagline}</div>
               </div>
-              <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+              <div className="flex flex-wrap justify-end gap-1.5">
                 {meta?.caps.map((c) => <span key={c} className="badge">{c}</span>)}
               </div>
             </div>
@@ -151,8 +151,8 @@ function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () =
   }[m.state]
 
   return (
-    <div className="flex items-center gap-4 px-5 py-4">
-      <div className="min-w-0 flex-1">
+    <div className="flex flex-wrap items-center gap-4 px-5 py-4">
+      <div className="min-w-[240px] flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="whitespace-nowrap text-[13.5px] font-semibold">{m.name}</span>
           <span className="badge">{m.params}</span>
@@ -160,13 +160,13 @@ function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () =
           {stateBadge}
         </div>
         <div className="mt-1 text-[12px] text-fg-muted">{m.description}</div>
-        <div className="mt-1 flex items-center gap-3 text-[11px] text-fg-dim">
-          <span className={clsx('font-medium', (m.license === 'MIT' || m.license === 'Apache-2.0') ? 'text-ok' : 'text-warn')}>
+        <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-fg-dim">
+          <span className={clsx('whitespace-nowrap font-medium', (m.license === 'MIT' || m.license === 'Apache-2.0') ? 'text-ok' : 'text-warn')}>
             {m.license}
           </span>
-          <span>{m.size_gb} GB download</span>
-          {m.vram_gb > 0 && <span>≈ {m.vram_gb} GB VRAM</span>}
-          <span>{m.languages.length} languages</span>
+          <span className="whitespace-nowrap">{m.size_gb} GB download</span>
+          {m.vram_gb > 0 && <span className="whitespace-nowrap">≈ {m.vram_gb} GB VRAM</span>}
+          <span className="whitespace-nowrap">{m.languages.length} languages</span>
         </div>
         {m.state === 'downloading' && (
           <div className="mt-2 h-[5px] w-full max-w-[420px] overflow-hidden rounded-full bg-ink-700">
