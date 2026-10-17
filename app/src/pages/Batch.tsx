@@ -132,7 +132,7 @@ export default function Batch() {
                 onClick={() => {
                   const a = document.createElement('a')
                   a.href = api.exportBatchUrl(lastBatchId)
-                  a.download = `heyvoice-batch-${lastBatchId}.zip`
+                  a.download = `heyvoices-batch-${lastBatchId}.zip`
                   document.body.appendChild(a)
                   a.click()
                   a.remove()
@@ -157,7 +157,7 @@ export default function Batch() {
         {errors > 0 && <span className="ml-2 text-danger">{errors} failed</span>}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2" data-tour="batch">
         {rows.map((row) => (
           <div key={row.key} className={clsx(
             'panel flex items-center gap-3 px-4 py-3',

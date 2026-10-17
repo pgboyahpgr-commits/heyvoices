@@ -1,4 +1,4 @@
-# HeyVoice REST API
+# HeyVoices REST API
 
 Base URL: `http://127.0.0.1:17300` — localhost only, no auth needed (the app never binds beyond
 loopback). Interactive OpenAPI docs are always available at `/docs` while the backend runs.
@@ -16,7 +16,7 @@ loopback). Interactive OpenAPI docs are always available at `/docs` while the ba
 
 ### `GET /health`
 ```json
-{ "status": "ok", "version": "0.1.0", "app": "HeyVoice" }
+{ "status": "ok", "version": "0.2.0", "app": "HeyVoices" }
 ```
 
 ### `GET /system/info`
@@ -57,7 +57,7 @@ with requests.get("http://127.0.0.1:17300/system/events", stream=True) as r:
 PATCH expects `{ "patch": { ... } }`. Settings keys: `output_format`, `normalize_loudness`,
 `target_lufs`, `chunk_max_chars`, `crossfade_ms`, `default_engine`, `default_language`,
 `auto_unload`, `vram_budget_gb`, `transcribe_size` (Whisper model for reference clips),
-`pronunciations` (`[{"from": "HeyVoice", "to": "Hey Voice"}]` — applied before synthesis).
+`pronunciations` (`[{"from": "HeyVoices", "to": "Hey Voice"}]` — applied before synthesis).
 
 ## Voices
 

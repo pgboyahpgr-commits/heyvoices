@@ -1,12 +1,12 @@
-# MCP Server — use HeyVoice from Claude & other agents
+# MCP Server — use HeyVoices from Claude & other agents
 
-`backend/heyvoice/mcp_server.py` exposes the running HeyVoice backend as
+`backend/heyvoice/mcp_server.py` exposes the running HeyVoices backend as
 [Model Context Protocol](https://modelcontextprotocol.io) tools over **stdio**. Any MCP-capable
 agent (Claude Desktop, Claude Code, Cursor, custom SDK agents) can then list your voices and
 generate speech as a normal tool call. Everything stays on this machine — the MCP server is a thin
 bridge to the local REST API on `127.0.0.1:17300`.
 
-> The HeyVoice desktop app (or at least the Python backend) must be running. If the backend is
+> The HeyVoices desktop app (or at least the Python backend) must be running. If the backend is
 > down, tools return a clear "backend unreachable" error.
 
 ## Tools
@@ -45,7 +45,7 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json` (paths: adjust to your inst
 }
 ```
 
-Restart Claude Desktop. The HeyVoice tools appear under the tools (🔌) menu.
+Restart Claude Desktop. The HeyVoices tools appear under the tools (🔌) menu.
 
 ## Claude Code (CLI)
 
@@ -60,7 +60,7 @@ Use the same `mcpServers` JSON block as Claude Desktop — Cursor reads it from
 
 ## Example prompts
 
-- "List the voices in HeyVoice, then read this paragraph in the Podcast Guy voice."
+- "List the voices in HeyVoices, then read this paragraph in the Podcast Guy voice."
 - "Generate a two-line game intro: first line in Lighthouse Keeper, second in Kokoro Heart,
   then give me the file path."
 - "Make an annoyed voicemail using Chatterbox Turbo with a [sigh]."

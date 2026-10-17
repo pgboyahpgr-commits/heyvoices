@@ -1,4 +1,4 @@
-// Tiny API client for the local HeyVoice backend.
+// Tiny API client for the local HeyVoices backend.
 import type {
   Generation, IngestResult, JobInfo, ModelInfo, Settings, SystemInfo, VerifyResult, Voice, VramInfo,
 } from './types'

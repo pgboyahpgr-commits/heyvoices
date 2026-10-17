@@ -1,4 +1,4 @@
-# HeyVoice backend setup - creates the Python environment and installs everything.
+# HeyVoices backend setup - creates the Python environment and installs everything.
 # Usage:  powershell -ExecutionPolicy Bypass -File backend\scripts\setup.ps1
 # Packaged app:  -VenvDir <userData>\venv -ModelsDir <userData>\models -LogFile <userData>\setup.log
 param(
@@ -17,7 +17,7 @@ if (-not $VenvDir)   { $VenvDir   = Join-Path $backendDir ".venv" }
 if (-not $ModelsDir) { $ModelsDir = Join-Path $repoRoot "models" }
 if ($LogFile) { try { Start-Transcript -Path $LogFile -Force | Out-Null } catch {} }
 
-Write-Host "=== HeyVoice setup ===" -ForegroundColor Cyan
+Write-Host "=== HeyVoices setup ===" -ForegroundColor Cyan
 Write-Host "Backend: $backendDir"
 Write-Host "Venv:    $VenvDir"
 Write-Host "Models:  $ModelsDir"

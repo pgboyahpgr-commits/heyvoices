@@ -100,7 +100,7 @@ export default function Player() {
     `&artist=${encodeURIComponent(gen.voice_name)}`
 
   return (
-    <div className="animate-in relative border-t border-line px-5 py-3.5" style={{ background: 'var(--color-ink-850)' }}>
+    <div className="animate-in relative border-t border-line px-5 py-3.5" data-tour="player" style={{ background: 'var(--color-ink-850)' }}>
       <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-accent/35 to-transparent" />
       {variants.length > 1 && (
         <div className="mb-2.5 flex items-center gap-1.5">

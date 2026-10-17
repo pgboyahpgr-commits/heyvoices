@@ -1,4 +1,4 @@
-﻿// HeyVoice Electron main process â€” hosts the UI and auto-starts the Python backend.
+﻿// HeyVoices Electron main process â€” hosts the UI and auto-starts the Python backend.
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
@@ -25,7 +25,7 @@ function checkHealth() {
 }
 
 // Packaged layout: backend source ships in resources/backend; the Python env,
-// models and data live under %APPDATA%\HeyVoice so updates never wipe them.
+// models and data live under %APPDATA%\HeyVoices so updates never wipe them.
 function packagedPaths() {
   const userRoot = app.getPath('userData')
   const backendDir = path.join(process.resourcesPath, 'backend')
@@ -71,10 +71,10 @@ async function ensureBackend() {
     if (!fs.existsSync(p.python)) {
       const { response } = await dialog.showMessageBox({
         type: 'info',
-        title: 'HeyVoice â€” first run',
+        title: 'HeyVoices â€” first run',
         message: 'Setting up the voice engine',
         detail:
-          'HeyVoice needs to install its Python environment and download the voice models ' +
+          'HeyVoices needs to install its Python environment and download the voice models ' +
           'on first launch.\n\nAbout 4 GB of downloads, 10â€“30 minutes, internet required. ' +
           'A PowerShell window will show the progress. This only happens once.\n\n' +
           `Environment: ${p.venvDir}\nModels: ${p.modelsDir}`,
@@ -90,7 +90,7 @@ async function ensureBackend() {
       const ok = await runFirstRunSetup(p)
       if (!ok || !fs.existsSync(p.python)) {
         dialog.showErrorBox(
-          'HeyVoice setup failed',
+          'HeyVoices setup failed',
           'The voice engine could not be installed.\n\n' +
           `Setup log: ${p.setupLog}\n\n` +
           'Common causes: no internet connection, or the PowerShell window was closed early.'
@@ -143,7 +143,7 @@ function createWindow() {
     backgroundColor: '#101114',
     icon: fs.existsSync(DEV_ICON) ? DEV_ICON : undefined,
     autoHideMenuBar: true,
-    title: 'HeyVoice',
+    title: 'HeyVoices',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -163,6 +163,10 @@ function createWindow() {
 ipcMain.handle('open-path', async (_e, p) => shell.openPath(p))
 ipcMain.handle('show-item', async (_e, p) => shell.showItemInFolder(p))
 ipcMain.handle('backend-url', () => BACKEND_URL)
+ipcMain.handle('open-external', async (_e, url) => {
+  if (typeof url === 'string' && /^https?:\/\//i.test(url)) return shell.openExternal(url)
+  return false
+})
 
 app.whenReady().then(async () => {
   await ensureBackend()

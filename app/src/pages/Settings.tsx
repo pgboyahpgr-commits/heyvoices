@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, FolderOpen, HardDrive, Info, Plus, Save, Trash2, Type, Zap } from 'lucide-react'
+import { ArrowRight, Compass, FolderOpen, Globe, HardDrive, Info, Plus, Save, Trash2, Type, Zap } from 'lucide-react'
 import { api } from '../lib/api'
 import { useApp } from '../lib/store'
 import type { Settings as SettingsType } from '../lib/types'
@@ -133,7 +133,7 @@ export default function Settings() {
         </h2>
         <p className="mb-4 text-[11.5px] leading-relaxed text-fg-dim">
           Rewrite words right before synthesis — fix names, acronyms and loanwords
-          (<span className="font-mono text-fg-muted">HeyVoice</span> → <span className="font-mono text-fg-muted">Hey Voice</span>).
+          (<span className="font-mono text-fg-muted">HeyVoices</span> → <span className="font-mono text-fg-muted">Hey Voices</span>).
           Case-sensitive, applied to every new generation and story line.
         </p>
         <div className="flex flex-col gap-2">
@@ -218,10 +218,27 @@ export default function Settings() {
         )}
       </section>
 
-      <section className="panel p-5 text-[11.5px] leading-relaxed text-fg-dim">
-        <span className="font-medium text-fg-muted">HeyVoice {info?.version}</span> — fully local AI voice studio.
-        Built with Qwen3-TTS (Apache-2.0), Chatterbox (MIT) and Kokoro (Apache-2.0).
-        The backend listens only on 127.0.0.1:17300 and never sends your audio anywhere.
+      <section className="panel p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-[260px] flex-1 text-[11.5px] leading-relaxed text-fg-dim">
+            <span className="font-medium text-fg-muted">HeyVoices {info?.version}</span> — fully local AI voice studio.
+            Built with Qwen3-TTS (Apache-2.0), Chatterbox (MIT) and Kokoro (Apache-2.0).
+            The backend listens only on 127.0.0.1:17300 and never sends your audio anywhere.
+            <div className="mt-2 font-medium text-accent-soft">Built by GeethuDino</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn" onClick={() => useApp.getState().setTourOpen(true)}>
+              <Compass size={14} /> Take the tour
+            </button>
+            <button
+              className="btn"
+              title="Open the HeyVoices website"
+              onClick={() => (window as any).heyvoice?.openExternal?.('https://pgboyahpgr-commits.github.io/heyvoices/')}
+            >
+              <Globe size={14} /> Website
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   )

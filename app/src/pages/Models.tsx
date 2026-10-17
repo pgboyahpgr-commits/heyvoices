@@ -77,7 +77,7 @@ export default function Models() {
         if (!list.length) return null
         const meta = ENGINE_INFO[engineId]
         return (
-          <div key={engineId} className="panel overflow-hidden">
+          <div key={engineId} className="panel overflow-hidden" data-tour="models">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line bg-white/[0.015] px-5 py-3.5">
               <div className="min-w-[220px] flex-1">
                 <div className="flex items-center gap-2">

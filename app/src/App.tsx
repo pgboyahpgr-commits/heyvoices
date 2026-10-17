@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import Player from './components/Player'
 import CommandPalette from './components/CommandPalette'
+import Tour from './components/Tour'
 import { Toasts } from './components/ui'
 import { LogoMark } from './components/brand'
 import { useApp } from './lib/store'
@@ -25,6 +26,14 @@ export default function App() {
     init()
   }, [init])
 
+  // first run: offer the guided tour once the engine is up
+  useEffect(() => {
+    if (!ready || backendDown) return
+    try {
+      if (!localStorage.getItem('hv_tour_seen')) useApp.getState().setTourOpen(true)
+    } catch { /* private mode etc. */ }
+  }, [ready, backendDown])
+
   if (!ready) {
     return (
       <div className="app-bg flex h-full flex-col items-center justify-center gap-5">
@@ -32,7 +41,7 @@ export default function App() {
           <LogoMark size={64} animated />
         </div>
         <div className="text-center">
-          <div className="text-[16px] font-semibold">HeyVoice</div>
+          <div className="text-[16px] font-semibold">HeyVoices</div>
           <div className="mt-1 flex items-center gap-2 text-[12.5px] text-fg-muted">
             <Loader2 size={13} className="animate-spin" />
             {backendDown ? 'Waiting for the local engine to come online…' : 'Starting local engine…'}
@@ -68,6 +77,7 @@ export default function App() {
       </div>
       <Toasts />
       <CommandPalette />
+      <Tour />
     </div>
   )
 }

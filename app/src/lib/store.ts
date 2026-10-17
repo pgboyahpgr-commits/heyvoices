@@ -57,6 +57,7 @@ interface State {
   storyLines: StoryLine[]
   playTick: number
   paletteOpen: boolean
+  tourOpen: boolean
   intent: string | null
   partial: { job_id: string; file: string; seconds: number } | null
 
@@ -69,6 +70,7 @@ interface State {
   playGen: (g: Generation) => void
   setStoryLines: (lines: StoryLine[] | ((prev: StoryLine[]) => StoryLine[])) => void
   setPaletteOpen: (open: boolean) => void
+  setTourOpen: (open: boolean) => void
   setIntent: (intent: string | null) => void
   init: () => void
   refreshAll: () => Promise<void>
@@ -164,6 +166,7 @@ export const useApp = create<State>((set, get) => ({
   storyLines: [],
   playTick: 0,
   paletteOpen: false,
+  tourOpen: false,
   intent: null,
   partial: null,
   draft: {
@@ -200,6 +203,7 @@ export const useApp = create<State>((set, get) => ({
   setStoryLines: (lines) =>
     set((s) => ({ storyLines: typeof lines === 'function' ? lines(s.storyLines) : lines })),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setTourOpen: (tourOpen) => set({ tourOpen }),
   setIntent: (intent) => set({ intent }),
 
   init: () => {

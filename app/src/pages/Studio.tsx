@@ -163,7 +163,7 @@ export default function Studio() {
 
         <div className="flex min-w-0 flex-col gap-5">
           {/* composer */}
-          <div className="panel">
+          <div className="panel" data-tour="composer">
             {/* target row */}
             <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
               <VoicePicker voices={voices} selected={voice} onSelect={(v) => selectVoice(v.id)} />
@@ -396,7 +396,7 @@ export default function Studio() {
           </div>
 
           {/* takes */}
-          <div>
+          <div data-tour="takes">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="flex shrink-0 items-center gap-2 text-[15px] font-semibold">
                 <Clock size={15} className="text-fg-dim" /> Takes
@@ -461,7 +461,7 @@ function VoiceRail() {
   const openNewVoice = () => { setPage('voices'); setIntent('new-voice') }
 
   return (
-    <aside className="panel sticky top-4 flex max-h-[calc(100vh-215px)] flex-col">
+    <aside className="panel sticky top-4 flex max-h-[calc(100vh-190px)] flex-col" data-tour="rail">
       <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">
         <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-fg-dim">Voices</span>
         <span className="badge !py-px !text-[9.5px]">{voices.length}</span>

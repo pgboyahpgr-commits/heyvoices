@@ -1,4 +1,4 @@
-"""HeyVoice backend entry point. Run:  python -m heyvoice"""
+"""HeyVoices backend entry point. Run:  python -m heyvoice"""
 from __future__ import annotations
 
 import asyncio
@@ -12,7 +12,7 @@ from .api import router, seed_presets
 from .config import HOST, OUTPUTS_DIR, PORT, UPLOADS_DIR, VERSION, VOICES_DIR
 from .jobs import start_worker
 
-app = FastAPI(title="HeyVoice", version=VERSION)
+app = FastAPI(title="HeyVoices", version=VERSION)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,7 +35,7 @@ async def _startup() -> None:
         seed_presets()
     except Exception as exc:  # noqa: BLE001
         print("preset seeding failed:", exc, flush=True)
-    print(f"HeyVoice backend v{VERSION} ready on http://{HOST}:{PORT}", flush=True)
+    print(f"HeyVoices backend v{VERSION} ready on http://{HOST}:{PORT}", flush=True)
 
 
 def main() -> None:

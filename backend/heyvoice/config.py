@@ -22,7 +22,7 @@ SETTINGS_PATH = DATA_DIR / "settings.json"
 
 HOST = os.environ.get("HEYVOICE_HOST", "127.0.0.1")
 PORT = int(os.environ.get("HEYVOICE_PORT", "17300"))
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 # Make every HuggingFace-based engine cache into models/hf so the whole app
 # is self-contained inside the project folder.
@@ -43,7 +43,7 @@ DEFAULT_SETTINGS: dict = {
     "auto_unload": True,
     "vram_budget_gb": 6.5,
     "transcribe_size": "small",      # whisper model used for reference transcripts
-    "pronunciations": [],            # [{"from": "HeyVoice", "to": "Hey Voice"}, ...]
+    "pronunciations": [],            # [{"from": "HeyVoices", "to": "Hey Voice"}, ...]
 }
 
 _lock = Lock()

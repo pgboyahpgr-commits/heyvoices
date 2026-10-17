@@ -76,9 +76,14 @@
 - [ ] Single-file installer (NSIS) with embedded Python runtime — no dev tools needed
   - [x] NSIS installer bundles the backend source; first launch auto-installs the Python env
         (uv-managed 3.12 + dependencies + model prefetch — internet once) and stores everything in
-        `%APPDATA%\HeyVoice`; packaged app verified end-to-end on hardware (spawns its own backend
+        `%APPDATA%\HeyVoices`; packaged app verified end-to-end on hardware (spawns its own backend
         with user-dir data/models)
   - [ ] Fully offline install: Python wheels + models bundled in the installer
+- [x] Multi-platform builds: **Windows** setup + portable (assisted NSIS installer, no-install
+      portable exe), **Linux** AppImage + deb, **macOS** dmg + zip — electron-builder targets plus a
+      CI release workflow that builds all three platforms on every `v*` tag
+- [x] `setup.sh` — Linux/macOS backend setup (uv, Python 3.12 venv, CUDA/MPS torch, requirements,
+      prefetch + self-check)
 - [ ] Auto-updates, crash reports stored locally
 - [ ] First-run model picker tuned per GPU
 
@@ -87,6 +92,18 @@
 - [ ] k2-fsa OmniVoice (646 languages) as an optional heavyweight engine
 - [ ] Fine-tune wizard for Qwen3-TTS (LoRA on personal recordings)
 - [ ] ACE-Step / music-bed mixing for YouTube workflows
+
+## Phase 6 — Brand, tour & web presence
+- [x] Rename HeyVoice → HeyVoices everywhere user-visible (UI, splash, installer/productName, MCP
+      server, export filenames, docs) — internal identifiers (`heyvoice` package, `window.heyvoice`
+      bridge, env vars) kept for stability
+- [x] In-app guided tour: 11 page-aware steps with spotlight overlay — first-run auto-start plus
+      replay from the sidebar footer, Settings → About and `Ctrl+K`; completion remembered
+- [x] "Built by GeethuDino" attribution (sidebar, Settings, installer copyright, README, website)
+- [x] Landing page (`website/`) with real generated-voice demos rendered by HeyVoices itself —
+      grey + teal aesthetic matching the app, deployed to GitHub Pages via Actions
+- [x] Public repo hygiene: MIT LICENSE, README badges + download matrix, release workflow
+      (Win/Linux/macOS artifacts), Pages deploy workflow
 
 ## Ideas backlog
 - Voice "blending" (interpolate two clone prompts)

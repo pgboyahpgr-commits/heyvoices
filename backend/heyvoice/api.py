@@ -1,4 +1,4 @@
-"""REST API routes for HeyVoice."""
+"""REST API routes for HeyVoices."""
 from __future__ import annotations
 
 import asyncio
@@ -34,7 +34,7 @@ def _color_for(name: str) -> str:
 # ================================================================ system
 @router.get("/health")
 def health() -> dict:
-    return {"status": "ok", "version": VERSION, "app": "HeyVoice"}
+    return {"status": "ok", "version": VERSION, "app": "HeyVoices"}
 
 
 @router.get("/system/info")
@@ -579,7 +579,7 @@ def generations_export(batch_id: str) -> StreamingResponse:
                 if srt:
                     z.writestr(name.rsplit(".", 1)[0] + ".srt", srt)
     buf.seek(0)
-    fname = f"heyvoice-batch-{batch_id[:8] or 'export'}.zip"
+    fname = f"heyvoices-batch-{batch_id[:8] or 'export'}.zip"
     return StreamingResponse(buf, media_type="application/zip",
                              headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
@@ -643,7 +643,7 @@ def generation_srt(gid: str):
     if not body:
         raise HTTPException(400, "Nothing to subtitle in this take")
     return PlainTextResponse(body, headers={
-        "Content-Disposition": f'attachment; filename="heyvoice-{gid}.srt"'})
+        "Content-Disposition": f'attachment; filename="heyvoices-{gid}.srt"'})
 
 
 def _meta_escape(s: str) -> str:
@@ -653,7 +653,7 @@ def _meta_escape(s: str) -> str:
 
 @router.get("/generations/{gid}/chapter")
 def generation_chapter(gid: str, fmt: str = "m4b", title: str = "", artist: str = "",
-                       album: str = "HeyVoice", track: int = 0):
+                       album: str = "HeyVoices", track: int = 0):
     """Audiobook-ready export: 44.1 kHz with metadata tags and chapter marks.
 
     fmt=m4b → AAC audiobook with native chapters; fmt=mp3 → ID3v2 with CHAP frames.
@@ -672,14 +672,14 @@ def generation_chapter(gid: str, fmt: str = "m4b", title: str = "", artist: str 
         raise HTTPException(404, "Audio file not found")
     duration = float(gen.get("duration") or 0)
     t_title = (title.strip() or (gen.get("text") or "").strip()[:60]
-               or gen.get("voice_name") or "HeyVoice").replace("\n", " ").strip()
-    t_artist = artist.strip() or gen.get("voice_name") or "HeyVoice"
+               or gen.get("voice_name") or "HeyVoices").replace("\n", " ").strip()
+    t_artist = artist.strip() or gen.get("voice_name") or "HeyVoices"
     timings = (gen.get("params") or {}).get("line_timings") or []
     chapters = timings or [{"text": "Chapter 1", "start": 0.0, "end": max(duration, 0.1)}]
     meta = [";FFMETADATA1",
             f"title={_meta_escape(t_title)}",
             f"artist={_meta_escape(t_artist)}",
-            f"album={_meta_escape(album or 'HeyVoice')}"]
+            f"album={_meta_escape(album or 'HeyVoices')}"]
     if track:
         meta.append(f"track={int(track)}")
     for ch in chapters:

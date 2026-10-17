@@ -1,16 +1,20 @@
 {
-  "name": "heyvoice-app",
+  "name": "heyvoices-app",
   "private": true,
-  "version": "0.1.0",
-  "productName": "HeyVoice",
-  "description": "HeyVoice — fully-local AI voice studio (ElevenLabs-style, on your own GPU)",
+  "version": "0.2.0",
+  "productName": "HeyVoices",
+  "description": "HeyVoices — fully-local AI voice studio (clone, design and generate voices on your own GPU). Built by GeethuDino.",
+  "author": "GeethuDino",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n ui,app -c cyan,magenta \"vite\" \"wait-on tcp:127.0.0.1:5173 && electron .\"",
     "dev:ui": "vite",
     "dev:backend": "..\\backend\\.venv\\Scripts\\python.exe -m heyvoice",
     "build:ui": "vite build",
-    "build": "vite build && electron-builder --win nsis"
+    "build": "vite build && electron-builder --win nsis portable",
+    "dist:win": "vite build && electron-builder --win nsis portable",
+    "dist:linux": "vite build && electron-builder --linux",
+    "dist:mac": "vite build && electron-builder --mac"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.0",
@@ -35,7 +39,9 @@
     "wait-on": "^8.0.0"
   },
   "build": {
-    "appId": "sh.heyvoice.studio",
+    "appId": "sh.heyvoices.studio",
+    "productName": "HeyVoices",
+    "copyright": "Built by GeethuDino",
     "files": ["dist/**", "electron/**"],
     "extraResources": [
       {
@@ -50,6 +56,34 @@
         ]
       }
     ],
-    "win": { "target": "nsis", "icon": "build/icon.ico" }
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "artifactName": "${productName} Setup ${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "HeyVoices"
+    },
+    "portable": {
+      "artifactName": "${productName} Portable ${version}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "build/icon.png",
+      "category": "AudioVideo",
+      "maintainer": "GeethuDino",
+      "synopsis": "Fully-local AI voice studio",
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "build/icon.png",
+      "category": "public.app-category.music",
+      "artifactName": "${productName}-${version}.${ext}"
+    }
   }
 }

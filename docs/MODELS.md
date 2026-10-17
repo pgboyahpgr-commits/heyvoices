@@ -27,12 +27,12 @@ fixed in place; no full re-download needed.
 
 ### Qwen3-TTS (flagship)
 - 3-second zero-shot cloning; quality improves with 10–30 s references.
-- **Clone mode wants a transcript of the reference clip.** HeyVoice transcribes it with Whisper
+- **Clone mode wants a transcript of the reference clip.** HeyVoices transcribes it with Whisper
   automatically at upload; if transcription fails it falls back to `x_vector_only` (lower fidelity,
   still usable). Editing the transcript in the voice editor is worth it for best results.
 - Preset speakers (CustomVoice): Vivian, Serena, Uncle Fu, Dylan, Eric, Ryan, Aiden, Ono Anna,
   Sohee — steer delivery with instructions like "excited and energetic".
-- VoiceDesign: describe → generate → save as a clonable voice (HeyVoice automates the whole loop).
+- VoiceDesign: describe → generate → save as a clonable voice (HeyVoices automates the whole loop).
 - Note: cloning and emotion-instruction control can't be combined on the same generation.
 
 ### Chatterbox (Resemble AI, MIT)
@@ -41,7 +41,7 @@ fixed in place; no full re-download needed.
 - Turbo: hundreds of milliseconds-class English model that understands paralinguistic tags:
   `[laugh] [chuckle] [sigh] [gasp] [whisper] [angry] [happy] [sad] [dramatic] [narration]`.
   Verified on the RTX 4060 (10 s expressive take, cloning + tags together). The package's built-in
-  loudness norm hands the reference clip to the tokenizer as float64 and crashes — HeyVoice disables
+  loudness norm hands the reference clip to the tokenizer as float64 and crashes — HeyVoices disables
   it (references are pre-normalized) and patches the tokenizer to be dtype-safe.
 - Outputs embed an inaudible **PerTh watermark** — keep in mind for "clean" deliverables.
 

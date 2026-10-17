@@ -77,7 +77,7 @@ export default function Voices() {
             <button className="btn" onClick={() => setDesignOpen(true)}>
               <Wand2 size={14} className="text-accent-soft" /> Design a voice
             </button>
-            <button className="btn btn-primary" onClick={() => setWizardOpen(true)}>
+            <button className="btn btn-primary" data-tour="new-voice" onClick={() => setWizardOpen(true)}>
               <Plus size={15} /> New voice
             </button>
           </>

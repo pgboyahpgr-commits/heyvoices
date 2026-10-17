@@ -21,7 +21,7 @@ from heyvoice.engines.base import GenRequest  # noqa: E402
 from heyvoice.engines.qwen3tts import Qwen3TTSEngine  # noqa: E402
 
 DEMO_URL = "https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen3-TTS-Repo/clone.wav"
-TEXT = ("HeyVoice is running fully locally on this laptop, with a voice cloned from just a few seconds "
+TEXT = ("HeyVoices is running fully locally on this laptop, with a voice cloned from just a few seconds "
         "of audio. No cloud, no accounts - just a graphics card and open models.")
 
 

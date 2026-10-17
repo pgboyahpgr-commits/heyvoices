@@ -76,7 +76,7 @@ print("saved:", r.json()["url"])`
     <div className="flex flex-col gap-5">
       <PageHeader
         title="Local API"
-        subtitle="Every feature is a REST endpoint — wire HeyVoice into your apps, agents, games, or stream tools. The server only listens on this machine (127.0.0.1)."
+        subtitle="Every feature is a REST endpoint — wire HeyVoices into your apps, agents, games, or stream tools. The server only listens on this machine (127.0.0.1)."
       />
 
       <div className="panel flex items-center justify-between px-5 py-4">

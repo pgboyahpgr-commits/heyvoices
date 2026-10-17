@@ -1,13 +1,19 @@
-# HeyVoice — Local Voice Studio
+# HeyVoices — Local Voice Studio
+
+[![Website](https://img.shields.io/badge/website-live-14b8a6?style=flat-square)](https://pgboyahpgr-commits.github.io/heyvoices/)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-3b82f6?style=flat-square)](https://github.com/pgboyahpgr-commits/heyvoices/releases)
+[![License](https://img.shields.io/badge/license-MIT-6a737e?style=flat-square)](LICENSE)
 
 Fully-local, ElevenLabs-style AI voice studio for your own GPU. Clone any voice from a few seconds
 of audio, generate speech in 25+ languages, design brand-new voices from text descriptions, and
 bulk-produce voice lines for games, videos, audiobooks, and apps — with **zero cloud, zero accounts,
 zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
 
+> **Built by GeethuDino** · listen to real output on the [landing page](https://pgboyahpgr-commits.github.io/heyvoices/)
+
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  HeyVoice Studio (Electron + React)                        │
+│  HeyVoices Studio (Electron + React)                        │
 │    Studio · Story · Voices · Batch · Models · API · Settings│
 └──────────────────────────┬─────────────────────────────────┘
                            │  localhost REST + SSE  (127.0.0.1:17300)
@@ -51,7 +57,7 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   voices; emotion-exaggeration slider and expressive tags (`[laugh]`, `[whisper]`) for Chatterbox.
 - **Script mode** — `[[pause:600ms]]` markers, automatic sentence-aware chunking, crossfade
   stitching, loudness normalization to −16 LUFS, plus find→replace **pronunciation rules**
-  ("HeyVoice" → "Hey Voice") applied to every generation.
+  ("HeyVoices" → "Hey Voice") applied to every generation.
 - **Effects** — gain, pitch shift, reverb, compressor (via Pedalboard), applied before export.
 - **Batch** — CSV in (`Voice Name,Text` per line), named audio files out, one-click **ZIP export**
   for the whole batch — perfect for game lines. Finished renders export as **44.1 kHz MP3 with
@@ -59,13 +65,16 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   (exact timings for Story renders) from the player dock.
 - **Player dock** — waveform scrubbing, playback speed (1× / 1.25× / 1.5× / 0.75×), loop, star,
   re-roll with a new seed, download, and variant chips for 3-take batches.
-- **Live queue & telemetry** — the top bar shows real VRAM usage with a rolling sparkline; the
+- **Live queue & telemetry** — the sidebar shows real VRAM usage with a rolling sparkline; the
   queue popover lists running + waiting jobs with live progress (chunk 3/5), per-job cancel,
   reorder, and clear-queue — canceled renders stop between chunks and clean up after themselves.
 - **Model integrity** — verify any downloaded model against its recorded file manifest (catches
   interrupted downloads) and repair it with a resumable re-download of just the missing files.
 - **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
   open folders…).
+- **Guided tour** — a first-run walkthrough spotlights the sidebar, composer, voice rail, takes,
+  player and every page (clone, story, batch, models). Replay it anytime from the sidebar footer,
+  Settings → About, or `Ctrl+K`.
 - **Redesigned workspace** — a single minimal grey shell: sidebar with built-in command-palette
   search, grouped navigation, and a live status column (job queue with cancel/reorder, GPU + VRAM
   telemetry with sparkline, engine state). Studio keeps its sticky voice rail and take replay, now
@@ -103,15 +112,34 @@ drop in a short clip, and hit **Generate** in the Studio.
 
 ### Install it (no dev tools)
 
-Build the installer with `cd app; npm run build` → `app\dist\HeyVoice Setup 0.1.0.exe`
-(≈165 MB, NSIS, per-user install). It bundles the backend source; on first launch the app
-offers to set up its voice engine — it installs a private Python 3.12 (via `uv`, downloading
-one if the system has none), all dependencies, and prefetches the flagship model
-(~4 GB total, internet needed once, 10–30 min). A PowerShell window shows the progress.
+Grab the latest build from the [**Releases page**](https://github.com/pgboyahpgr-commits/heyvoices/releases):
 
-Everything user-level lives in `%APPDATA%\HeyVoice` (Python env, models, voices, outputs),
+| Platform | Artifacts | Status |
+| --- | --- | --- |
+| **Windows 10/11** | `HeyVoices Setup 0.2.0.exe` (assisted install) · `HeyVoices Portable 0.2.0.exe` (no install) | ready |
+| **Linux x64** | `HeyVoices-0.2.0.AppImage` · `HeyVoices-0.2.0.deb` | built by CI |
+| **macOS (Apple Silicon)** | `HeyVoices-0.2.0.dmg` · `.zip` | built by CI |
+
+The installer bundles the backend source; on first launch the app offers to set up its voice
+engine — it installs a private Python 3.12 (via `uv`, downloading one if the system has none), all
+dependencies, and prefetches the flagship model (~4 GB total, internet needed once, 10–30 min).
+A PowerShell window shows the progress.
+
+Build them yourself:
+
+```powershell
+cd app
+npm install
+npm run build        # Windows: setup + portable
+npm run dist:linux   # Linux: AppImage + deb
+npm run dist:mac     # macOS: dmg + zip
+```
+
+Everything user-level lives in `%APPDATA%\HeyVoices` (Python env, models, voices, outputs),
 so app updates and reinstalls never touch your library. `ffmpeg` must be on PATH
 (`winget install Gyan.FFmpeg`) — it powers video-clip cloning and MP3/M4B export.
+
+On Linux/macOS, prepare the backend environment with `bash backend/scripts/setup.sh`.
 
 ## Project structure
 
@@ -123,10 +151,13 @@ backend/
     engines/           # qwen3tts · chatterbox · kokoro · whisper_asr
     audio.py           # chunking, stitching, loudness, effects, export
     store.py           # SQLite voices + generations
-  scripts/             # setup.ps1, fix_install.ps1, smoke_clone.py
+  scripts/             # setup.ps1 (Windows) · setup.sh (Linux/macOS) · smoke_clone.py
 app/                   # Electron + React + Tailwind UI
   electron/main.cjs    # spawns the backend, hosts the window
   src/pages/           # Studio · Story · Voices · Batch · Models · API · Settings
+  build/               # icon generator + installer assets
+website/               # landing page (GitHub Pages) with real generated voice demos
+.github/workflows/     # Pages deploy + multi-platform release builds
 docs/                  # architecture, models, roadmap, API
 models/                # downloaded weights (gitignored)
 data/                  # voices, outputs, SQLite db (gitignored)
@@ -137,11 +168,13 @@ data/                  # voices, outputs, SQLite db (gitignored)
 - [Architecture](docs/ARCHITECTURE.md) — how the pieces fit together
 - [Models](docs/MODELS.md) — catalog, licenses, VRAM budget, quality tips
 - [API](docs/API.md) — REST reference and integration examples
-- [MCP](docs/MCP.md) — use HeyVoice as agent tools (Claude, Cursor, SDK agents)
+- [MCP](docs/MCP.md) — use HeyVoices as agent tools (Claude, Cursor, SDK agents)
 - [Roadmap](docs/ROADMAP.md) — phases and status
+- [Website](website/index.html) — the landing page (deployed to GitHub Pages)
 
 ## Licensing
 
 All bundled models are permissively licensed (Qwen3-TTS Apache-2.0, Chatterbox MIT,
 Kokoro Apache-2.0, Whisper MIT). No non-commercial weights are used, so your outputs — and this
-app — stay product-safe. HeyVoice itself is your project; treat it as MIT for personal use.
+app — stay product-safe. HeyVoices itself is MIT-licensed (see [LICENSE](LICENSE)) — built by
+GeethuDino.

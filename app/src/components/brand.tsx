@@ -1,4 +1,4 @@
-// HeyVoice brand mark — a hand-built SVG waveform tile (no icon font, no raster).
+// HeyVoices brand mark — a hand-built SVG waveform tile (no icon font, no raster).
 // Reused by the sidebar, splash screen and (as a standalone file) the favicon.
 
 export function LogoMark({

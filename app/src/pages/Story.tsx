@@ -138,7 +138,7 @@ export default function Story() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
         {/* cast rail */}
-        <div className="panel flex h-fit flex-col p-3 xl:sticky xl:top-0">
+        <div className="panel flex h-fit flex-col p-3 xl:sticky xl:top-0" data-tour="cast">
           <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-fg-dim">Cast</div>
           <div className="relative mb-2">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-dim" />

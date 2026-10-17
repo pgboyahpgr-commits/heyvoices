@@ -1,6 +1,6 @@
-"""HeyVoice MCP server — use the local voice studio from any MCP agent.
+"""HeyVoices MCP server — use the local voice studio from any MCP agent.
 
-Exposes the running HeyVoice backend (http://127.0.0.1:17300) as MCP tools
+Exposes the running HeyVoices backend (http://127.0.0.1:17300) as MCP tools
 over stdio: list voices, speak text, queue generations, poll jobs, inspect
 models and studio status. Everything stays on this machine.
 
@@ -23,7 +23,7 @@ from mcp.server.mcpserver import MCPServer
 API = os.environ.get("HEYVOICE_API", "http://127.0.0.1:17300").rstrip("/")
 
 server = MCPServer(
-    "HeyVoice",
+    "HeyVoices",
     version="0.1.0",
     instructions=(
         "Fully local text-to-speech studio: preset voices, cloned voices and "
@@ -46,11 +46,11 @@ def _api(method: str, path: str, body: dict | None = None, timeout: float = 660.
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:400]
-        raise RuntimeError(f"HeyVoice API {exc.code} on {path}: {detail}") from None
+        raise RuntimeError(f"HeyVoices API {exc.code} on {path}: {detail}") from None
     except urllib.error.URLError as exc:
         raise RuntimeError(
-            f"HeyVoice backend unreachable at {API} ({exc.reason}). "
-            "Launch the HeyVoice desktop app first."
+            f"HeyVoices backend unreachable at {API} ({exc.reason}). "
+            "Launch the HeyVoices desktop app first."
         ) from None
 
 

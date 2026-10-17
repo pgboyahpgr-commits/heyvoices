@@ -42,6 +42,7 @@ export default function Sidebar() {
   const page = useApp((s) => s.page)
   const setPage = useApp((s) => s.setPage)
   const setPaletteOpen = useApp((s) => s.setPaletteOpen)
+  const setTourOpen = useApp((s) => s.setTourOpen)
   const info = useApp((s) => s.info)
   const connected = useApp((s) => s.connected)
   const voices = useApp((s) => s.voices)
@@ -112,12 +113,12 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-[236px] shrink-0 flex-col border-r border-line" style={{ background: 'var(--color-ink-950)' }}>
+    <aside className="flex h-full w-[236px] shrink-0 flex-col border-r border-line" data-tour="sidebar" style={{ background: 'var(--color-ink-950)' }}>
       {/* brand */}
       <div className="flex items-center gap-2.5 px-4 pb-1 pt-5">
         <LogoMark size={32} />
         <div>
-          <div className="text-[14.5px] font-bold leading-tight tracking-[-0.015em]">HeyVoice</div>
+          <div className="text-[14.5px] font-bold leading-tight tracking-[-0.015em]">HeyVoices</div>
           <div className="text-[10px] font-medium leading-tight text-fg-dim">Local voice studio</div>
         </div>
       </div>
@@ -303,7 +304,19 @@ export default function Sidebar() {
         )}
       </div>
 
-      <div className="px-4 pb-4 text-[10px] text-fg-dim">v{info?.version ?? '0.1.0'} · fully local · nothing leaves your PC</div>
+      <div className="px-4 pb-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-fg-dim">v{info?.version ?? '0.2.0'} · fully local</span>
+          <button
+            className="text-[10.5px] font-medium text-fg-dim transition-colors hover:text-accent-soft"
+            onClick={() => setTourOpen(true)}
+            title="Replay the guided tour"
+          >
+            Take the tour
+          </button>
+        </div>
+        <div className="mt-0.5 text-[10px] text-fg-dim/80">Built by GeethuDino</div>
+      </div>
     </aside>
   )
 }

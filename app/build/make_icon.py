@@ -1,4 +1,4 @@
-"""Generate app/build/icon.png + icon.ico for HeyVoice.
+"""Generate app/build/icon.png + icon.ico for HeyVoices.
 
 Draws the same brand mark as app/src/components/brand.tsx (gradient rounded
 tile + white waveform bars) at 1024px and exports:

@@ -1,7 +1,7 @@
 // Command palette (Ctrl+K): jump anywhere, run quick actions.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  BookOpen, Box, Braces, CornerDownLeft, FolderOpen, Layers, Search,
+  BookOpen, Box, Braces, Compass, CornerDownLeft, FolderOpen, Layers, Search,
   Settings2, Sparkles, Users, Wand2, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -92,6 +92,11 @@ export default function CommandPalette() {
         run: () => { (window as any).heyvoice?.openPath?.(info?.outputs_dir); setOpen(false) },
       },
       {
+        id: 'tour', label: 'Take the guided tour', hint: 'Help', icon: <Compass size={15} />,
+        keywords: 'tour help guide how to use onboarding walkthrough',
+        run: () => { useApp.getState().setTourOpen(true); setOpen(false) },
+      },
+      {
         id: 'copy-api', label: 'Copy API base URL', hint: 'Action', icon: <Braces size={15} />,
         keywords: 'copy api url integrate',
         run: () => { navigator.clipboard.writeText('http://127.0.0.1:17300'); toast('info', 'API base URL copied'); setOpen(false) },
@@ -163,7 +168,7 @@ export default function CommandPalette() {
           <span className="kbd">↵</span><span className="text-[10.5px] text-fg-dim">run</span>
           <span className="kbd">esc</span><span className="text-[10.5px] text-fg-dim">close</span>
           <span className="ml-auto flex items-center gap-1.5 text-[10.5px] text-fg-dim">
-            <Sparkles size={11} className="text-accent-soft" /> HeyVoice
+            <Sparkles size={11} className="text-accent-soft" /> HeyVoices
           </span>
         </div>
       </div>
