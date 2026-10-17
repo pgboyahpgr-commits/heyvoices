@@ -16,7 +16,7 @@ loopback). Interactive OpenAPI docs are always available at `/docs` while the ba
 
 ### `GET /health`
 ```json
-{ "status": "ok", "version": "0.2.0", "app": "HeyVoices" }
+{ "status": "ok", "version": "0.3.0", "app": "HeyVoices" }
 ```
 
 ### `GET /system/info`

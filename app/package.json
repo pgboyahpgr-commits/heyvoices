@@ -1,7 +1,7 @@
 {
   "name": "heyvoices-app",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "productName": "HeyVoices",
   "description": "HeyVoices — fully-local AI voice studio (clone, design and generate voices on your own GPU). Built by GeethuDino.",
   "author": "GeethuDino",
@@ -47,7 +47,10 @@
     "appId": "sh.heyvoices.studio",
     "productName": "HeyVoices",
     "copyright": "Built by GeethuDino",
-    "files": ["dist/**", "electron/**"],
+    "files": [
+      "dist/**",
+      "electron/**"
+    ],
     "extraResources": [
       {
         "from": "../backend",
@@ -66,7 +69,10 @@
       }
     ],
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "build/icon.ico"
     },
     "nsis": {
@@ -81,7 +87,10 @@
       "artifactName": "${productName} Portable ${version}.${ext}"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "build/icon.png",
       "category": "AudioVideo",
       "maintainer": "GeethuDino",
@@ -89,7 +98,10 @@
       "artifactName": "${productName}-${version}.${ext}"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.png",
       "category": "public.app-category.music",
       "artifactName": "${productName}-${version}.${ext}"

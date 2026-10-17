@@ -133,9 +133,9 @@ Grab the latest build from the [**Releases page**](https://github.com/pgboyahpgr
 
 | Platform | Artifacts | Status |
 | --- | --- | --- |
-| **Windows 10/11** | `HeyVoices Setup 0.2.0.exe` (assisted install) · `HeyVoices Portable 0.2.0.exe` (no install) | ready |
-| **Linux x64** | `HeyVoices-0.2.0.AppImage` · `HeyVoices-0.2.0.deb` | built by CI |
-| **macOS (Apple Silicon)** | `HeyVoices-0.2.0.dmg` · `.zip` | built by CI |
+| **Windows 10/11** | `HeyVoices.Setup.0.3.0.exe` (assisted install) · `HeyVoices.Portable.0.3.0.exe` (no install) | ready |
+| **Linux x64** | `HeyVoices-0.3.0.AppImage` · `HeyVoices-0.3.0.deb` | built by CI |
+| **macOS (Apple Silicon)** | `HeyVoices-0.3.0.dmg` · `HeyVoices-0.3.0.zip` | built by CI |
 
 The installer bundles the backend source; on first launch the app offers to set up its voice
 engine — it installs a private Python 3.12 (via `uv`, downloading one if the system has none), all
