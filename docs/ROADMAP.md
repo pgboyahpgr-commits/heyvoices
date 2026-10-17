@@ -64,6 +64,12 @@
       to voices, line/duration preview → loaded straight into the story editor
 - [x] Take comparison player: render 3 takes of a line, audition them side by side with variant
       chips, keep the best and discard the rest in one click
+- [x] **Emotion presets + local prompt assistant** — 15 one-click emotions (Excited, Whisper,
+      Devotional, Game NPC…); a pick applies a tuned delivery line instantly, and an optional small
+      local LLM (**Qwen3 0.6B/1.7B**, Apache-2.0 — `/assist` endpoint + queue job) refines it into a
+      script-aware prompt for instruct-capable engines; **tidy script** mode adds punctuation +
+      natural pauses with drift guards (words/language/script never changed); master toggle in
+      Settings, verified end-to-end (en + te, 0.6B)
 - [ ] Text expansion: numbers/dates/units (SSML-lite)
 - [ ] Batch v2 (rest): per-row settings, retries, folder-per-character naming schemes
 
@@ -85,7 +91,11 @@
       CI release workflow that builds all three platforms on every `v*` tag
 - [x] `setup.sh` — Linux/macOS backend setup (uv, Python 3.12 venv, CUDA/MPS torch, requirements,
       prefetch + self-check)
-- [ ] Auto-updates, crash reports stored locally
+- [x] **In-app updates** — Settings → App updates checks the latest GitHub release, shows the
+      release notes, downloads the installer with live SSE progress (size + MZ validation) and
+      launches it detached while the app quits to finish; quiet startup check (toggle, on by
+      default), sidebar dot, and a `Ctrl+K` action
+- [ ] Crash reports stored locally
 - [ ] First-run model picker tuned per GPU
 
 ## Phase 5 — Expanding the engine set
@@ -114,6 +124,8 @@
       grey + teal aesthetic matching the app, deployed to GitHub Pages via Actions
 - [x] Public repo hygiene: MIT LICENSE, README badges + download matrix, release workflow
       (Win/Linux/macOS artifacts), Pages deploy workflow
+- [x] Brand mark refresh: 4-bar waveform tile with a richer teal→blue→indigo gradient, synced
+      across the sidebar, splash, both favicons, the website icon and the installer icon
 
 ## Ideas backlog
 - Voice "blending" (interpolate two clone prompts)

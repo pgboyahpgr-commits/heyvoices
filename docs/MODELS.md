@@ -14,6 +14,8 @@ licensed** — safe for personal use *and* for shipping products built on their 
 | Chatterbox Turbo | Chatterbox | 350M | ~1 GB | ~2.5 GB | MIT | EN | Fast + expressive tags |
 | Kokoro 82M | Kokoro | 82M | ~0.4 GB | CPU | Apache-2.0 | 8 | Instant preset voices |
 | IndicF5 | IndicF5 | 0.3B | ~1.6 GB | ~2.2 GB | MIT | 11 | 11 Indian languages + zero-shot cloning (gated on HF) |
+| Prompt Assistant 0.6B (Qwen3) | Assistant | 0.6B | ~1.5 GB | ~1.7 GB | Apache-2.0 | 12+ | Writes delivery prompts from script + emotion (optional) |
+| Prompt Assistant 1.7B (Qwen3) | Assistant | 1.7B | ~3.6 GB | ~4.2 GB | Apache-2.0 | 12+ | Richer wording, finer emotion nuance (optional) |
 | Whisper `small` (faster-whisper) | ASR | 244M | ~0.5 GB | ~1.5 GB | MIT | 99 | Ref-text transcription (default) |
 | Whisper `large-v3-turbo` | ASR | 809M | ~1.6 GB | ~2 GB | MIT | 99 | "Better transcript" upgrade — names, numbers, punctuation |
 
@@ -23,6 +25,12 @@ licensed** — safe for personal use *and* for shipping products built on their 
 Marathi, Punjabi, Gujarati, Bengali, Assamese and Hindi with zero-shot cloning. It is **gated on
 Hugging Face** — click “Agree and access repository” once on the model page (free account), paste a
 read token in **Settings → Hugging Face**, then download it from the Models page.
+
+**Prompt assistant (optional, ~1.5 GB):** a small local LLM (**Qwen3 0.6B / 1.7B**, Apache-2.0)
+that powers the Studio's **Emotion presets** — it turns your script + a chosen emotion into the
+delivery prompt the instruct-capable engines understand, and tidies scripts with punctuation and
+natural pauses. The preset hints apply instantly without it; the assistant makes prompts
+script-aware. Fully offline.
 
 Every downloaded model gets a **file manifest** written at download time. The Models page can
 **Verify** any model against it (first run records the baseline) and **Repair** — a resumable
@@ -73,6 +81,20 @@ fixed in place; no full re-download needed.
   the download is refused.
 - Tuning: Speed (0.5–2.0) and CFG strength (default 2.0).
 
+### Prompt assistant (Qwen3, Apache-2.0)
+- Not a voice engine — a tiny text LLM that writes the **delivery instructions** instruct-capable
+  engines (Qwen3-TTS presets / VoiceDesign) understand, and cleans scripts up for any engine.
+- Two sizes: **0.6B (~1.5 GB download, ~1.7 GB VRAM)** is near-instant on any GPU; **1.7B
+  (~3.6 GB)** writes richer, more nuanced prompts. When both are installed the 1.7B wins.
+- **Instruct mode:** script + emotion (+ optional user notes) → one English delivery sentence
+  (≤ 30 words). If no emotion is picked, the assistant infers the strongest fit from the script.
+- **Tidy mode:** adds punctuation and `[[pause:250ms]]`-style markers. Guarded: length, script and
+  word-count drifts are detected and the original text is kept instead — the model can never
+  translate or rewrite your script.
+- Qwen3's "thinking" mode is disabled for speed; results are cleaned of any stray quoting or
+  list formatting.
+- Runs through the same queue as renders (single-GPU safety) and shuts down with the app.
+
 ## Hardware guidance (RTX 4060 Laptop, 8 GB)
 
 | Combination | Works? | Notes |
@@ -81,6 +103,7 @@ fixed in place; no full re-download needed.
 | Chatterbox ML + Turbo swapping | ✅ | ~3 GB each, auto-unload handles it |
 | IndicF5 | ✅ | ~1.4 GB loaded — the lightest GPU engine; leaves plenty of headroom |
 | Qwen 1.7B variants | ✅ | ~6.5 GB — close browsers/games first |
+| Prompt Assistant 0.6B | ✅ | ~1.7 GB — trivial; can even sit alongside a 0.6B TTS model with auto-unload off |
 | Everything at once | ❌ | Single-model residency is enforced by design |
 
 Measured on the reference machine (RTX 4060 Laptop, 8 GB) via `backend/scripts/smoke_clone.py`
@@ -106,6 +129,8 @@ Run the script yourself after setup to compare on your hardware.
 | Qwen3-TTS 1.7B VoiceDesign — description → voice | ✅ | 5.9 s speech in ~26 s first run, saved as a new voice |
 | IndicF5 — 11 Indian languages, cloned voice (te/ta/or/hi/ml/bn verified) | ✅ | 4.3 s speech in ~5.9 s (RTF ≈ 1.4×, model load ~6 s); ~1.4 GB VRAM; Telugu/Tamil round-trip ASR similarity 0.96–0.97 |
 | Story with mixed languages (en + te, one clone, engine switch per line) | ✅ | 3 lines stitched in ~35 s warm; Telugu line auto-routed to IndicF5 mid-story |
+| Prompt assistant — script + emotion → delivery prompt | ✅ | ~1.6 s warm (0.6B, model resident); Telugu & English prompts verified |
+| Prompt assistant — tidy script (en + te run-ons) | ✅ | ~3–5 s; punctuation + pauses added, Telugu script preserved, drift guard exercised |
 
 **Disk notes:** HuggingFace repos carry more than the runtime weights — `ResembleAI/chatterbox`
 pulls ~16 GB (all variants + dev artifacts) and VoiceDesign ~9 GB on disk. Disk is only needed

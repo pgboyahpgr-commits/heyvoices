@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
-  Check, ChevronDown, ChevronRight, Clock, Copy, Download, Dices, Loader2,
+  Check, ChevronDown, ChevronRight, Clock, Copy, Download, Dices, Eraser, Loader2,
   Mic, Pause, Play, Plus, RefreshCcw, RotateCcw, Search, SlidersHorizontal, Sparkles, Star, Trash2, Wand2, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
-import { fileUrl } from '../lib/api'
+import { api, fileUrl } from '../lib/api'
 import { useApp } from '../lib/store'
-import type { Generation, Voice } from '../lib/types'
-import { LANGUAGES, langLabel } from '../lib/types'
+import type { Emotion, Generation, Voice } from '../lib/types'
+import { EMOTIONS, LANGUAGES, detectScriptLanguage, langLabel } from '../lib/types'
 import { Avatar, engineLabel, fmtDuration, Slider, Toggle, timeAgo } from '../components/ui'
 import PageHeader from '../components/PageHeader'
 import { ArtTakes } from '../components/art'
 
-const INSTRUCT_CHIPS = ['whisper softly', 'excited and energetic', 'calm, slow, cinematic', 'sad and reflective', 'authoritative news anchor']
 const TAG_CHIPS = ['[laugh]', '[chuckle]', '[sigh]', '[gasp]', '[whisper]', '[angry]', '[happy]', '[sad]', '[dramatic]', '[narration]']
 const TEMPLATES: { name: string; text: string }[] = [
   { name: 'Podcast intro', text: 'Welcome back to the show. [[pause:400ms]] Today we are talking about something that changes everything.' },
@@ -64,7 +63,8 @@ const ENGINE_TUNING: Record<string, TuneSpec[]> = {
 
 export default function Studio() {
   const { voices, models, generations, selectedVoiceId, selectVoice, draft, setDraft,
-    job, generate, generateVariants, partial, info, setPage, deleteGens, toast } = useApp()
+    job, generate, generateVariants, partial, info, setPage, deleteGens, toast,
+    craftPrompt, assistBusy, assistNote } = useApp()
   const textRef = useRef<HTMLTextAreaElement | null>(null)
   const [deliveryOpen, setDeliveryOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -139,16 +139,61 @@ export default function Studio() {
     : (voice?.engine || (indicf5Ready && indicActive ? 'indicf5' : 'qwen3-tts'))
   const tuneSpecs = ENGINE_TUNING[tuneEngine] ?? []
 
+  // ---- prompt assistant (small local LLM) --------------------------------
+  const promptAssist = info?.settings?.prompt_assist !== false
+  const assistantModel = models.find(
+    (m) => m.engine === 'prompt-assist' && (m.state === 'ready' || m.state === 'loaded')) || null
+  const assistantDl = models.find(
+    (m) => m.engine === 'prompt-assist' && m.state === 'downloading') || null
+  const detectedLang = detectScriptLanguage(draft.text)
+
+  const applyEmotion = (e: Emotion) => {
+    if (draft.emotion === e.id) {           // second click clears the pick
+      setDraft({ emotion: '' })
+      return
+    }
+    if (supportsInstruct) {
+      setDraft({ emotion: e.id, instruct: e.hint })   // instant, works with no model
+    } else if (isChatterbox) {
+      setDraft({ emotion: e.id, exaggeration: e.exaggeration })
+      if (e.tag) insertAtCursor(e.tag, textRef.current)
+    } else {
+      setDraft({ emotion: e.id })
+    }
+  }
+
+  const installAssistant = async (id: string) => {
+    const name = models.find((m) => m.id === id)?.name ?? id
+    try {
+      await api.downloadModel(id)
+      toast('info', `Downloading ${name} — progress shows on the Models page`)
+    } catch (err: any) {
+      toast('error', err.message || String(err))
+    }
+  }
+
+  // Generate, with the optional "auto-craft the prompt first" step
+  const smartGenerate = async () => {
+    if (promptAssist && draft.autoInstruct && assistantModel && supportsInstruct &&
+        draft.emotion && draft.text.trim() && !busy) {
+      await craftPrompt('instruct')   // even on failure we generate with what's there
+    }
+    if (draft.takes > 1) await generateVariants(draft.takes)
+    else await generate()
+  }
+  const smartGenerateRef = useRef(smartGenerate)
+  smartGenerateRef.current = smartGenerate
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault()
-        if (!busy) generate()
+        if (!busy) smartGenerateRef.current()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [busy, generate])
+  }, [busy])
 
   const insertAtCursor = (token: string, target: HTMLTextAreaElement | null) => {
     const el = target ?? textRef.current
@@ -200,6 +245,18 @@ export default function Studio() {
               >
                 {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
               </select>
+
+              {detectedLang && draft.language === 'auto' && (
+                <span
+                  className={clsx('chip !cursor-default !py-0.5 !text-[10.5px]',
+                    indicf5Ready ? 'border-accent/40 text-accent-soft' : 'border-warn/40 text-warn')}
+                  title={indicf5Ready
+                    ? 'Detected from the script — It will render with the IndicF5 engine'
+                    : 'Detected from the script — install IndicF5 (11 Indian languages) on the Models page'}
+                >
+                  {langLabel(detectedLang)} detected · {indicf5Ready ? 'IndicF5' : 'IndicF5 not installed'}
+                </span>
+              )}
 
               <select
                 className="select !w-auto max-w-[200px]"
@@ -299,7 +356,7 @@ export default function Studio() {
               <button
                 className="btn btn-primary !px-6 !py-2.5 !text-[13.5px]"
                 disabled={busy || !draft.text.trim()}
-                onClick={() => (draft.takes > 1 ? generateVariants(draft.takes) : generate())}
+                onClick={smartGenerate}
               >
                 {busy ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                 {busy
@@ -311,6 +368,91 @@ export default function Studio() {
 
             {deliveryOpen && (
               <div className={clsx('animate-in border-t border-line px-4 py-4', !advancedOpen && 'rounded-b-[15px]')}>
+                {promptAssist && (
+                  <div className="mb-3">
+                    {(supportsInstruct || isChatterbox) && (
+                      <>
+                        <div className="mb-1.5 flex items-center gap-2 text-[11.5px] font-medium text-fg-muted">
+                          Emotion
+                          <span className="text-[10px] text-fg-dim">
+                            one click sets the delivery · ✨ refines it for this script
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {EMOTIONS.map((e) => (
+                            <button
+                              key={e.id}
+                              className={clsx('chip', draft.emotion === e.id && 'border-accent/60 bg-accent/15 text-accent-soft')}
+                              onClick={() => applyEmotion(e)}
+                              title={e.hint}
+                            >
+                              <span className="mr-1">{e.emoji}</span>{e.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      {assistantModel ? (
+                        <>
+                          {supportsInstruct && (
+                            <button
+                              className="btn !py-1.5 !text-[12px]"
+                              disabled={assistBusy || busy || !draft.text.trim()}
+                              onClick={() => craftPrompt('instruct')}
+                              title="The assistant reads your script + emotion and writes a delivery prompt the engine understands"
+                            >
+                              <Wand2 size={13} /> Craft prompt
+                            </button>
+                          )}
+                          <button
+                            className="btn !py-1.5 !text-[12px]"
+                            disabled={assistBusy || busy || !draft.text.trim()}
+                            onClick={() => craftPrompt('tidy')}
+                            title="Fix punctuation and add natural [[pause:…]] markers — your words are never changed"
+                          >
+                            <Eraser size={13} /> Tidy script
+                          </button>
+                          {supportsInstruct && (
+                            <Toggle
+                              label="Auto-craft before Generate"
+                              checked={draft.autoInstruct}
+                              onChange={(v) => setDraft({ autoInstruct: v })}
+                            />
+                          )}
+                          {assistBusy && (
+                            <span className="flex items-center gap-1.5 text-[11px] text-accent-soft">
+                              <Loader2 size={11} className="animate-spin" /> {assistNote || 'Working…'}
+                            </span>
+                          )}
+                        </>
+                      ) : assistantDl ? (
+                        <span className="flex items-center gap-1.5 text-[11px] text-fg-dim">
+                          <Loader2 size={11} className="animate-spin" />
+                          Downloading prompt assistant… {Math.round((assistantDl.progress || 0) * 100)}%
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-[11px] text-fg-dim">Prompt assistant (optional, local):</span>
+                          <button
+                            className="btn !py-1.5 !text-[12px]"
+                            onClick={() => installAssistant('qwen3-prompt-0.6b')}
+                            title="1.5 GB · Apache-2.0 — fast, great for emotion prompts"
+                          >
+                            <Download size={13} /> 0.6B · 1.5 GB
+                          </button>
+                          <button
+                            className="btn !py-1.5 !text-[12px]"
+                            onClick={() => installAssistant('qwen3-prompt-1.7b')}
+                            title="3.6 GB · Apache-2.0 — richer wording and finer emotion nuance"
+                          >
+                            <Download size={13} /> 1.7B · 3.6 GB
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {supportsInstruct && (
                   <div className="mb-3">
                     <div className="mb-1.5 flex items-center gap-2 text-[11.5px] font-medium text-fg-muted">
@@ -323,11 +465,6 @@ export default function Studio() {
                       value={draft.instruct}
                       onChange={(e) => setDraft({ instruct: e.target.value })}
                     />
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {INSTRUCT_CHIPS.map((c) => (
-                        <button key={c} className="chip" onClick={() => setDraft({ instruct: c })}>{c}</button>
-                      ))}
-                    </div>
                   </div>
                 )}
                 {isChatterbox && (
@@ -350,7 +487,9 @@ export default function Studio() {
                 )}
                 {!supportsInstruct && !isChatterbox && (
                   <div className="text-[12px] text-fg-dim">
-                    This engine has no delivery controls — pick a Qwen preset voice for instruct, or a Chatterbox voice for emotion.
+                    This engine has no delivery controls — but the ✨ Tidy script helper above and
+                    <span className="chip !cursor-default !py-0 !mx-1 !text-[10px] font-mono">[[pause:600ms]]</span>
+                    markers still shape the timing.
                   </div>
                 )}
               </div>

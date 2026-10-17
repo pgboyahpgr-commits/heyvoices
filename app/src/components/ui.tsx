@@ -156,7 +156,7 @@ export function EmptyState({ icon, title, subtitle }: { icon: React.ReactNode; t
 }
 
 export function engineLabel(engine: string): string {
-  return { 'qwen3-tts': 'Qwen3-TTS', chatterbox: 'Chatterbox', kokoro: 'Kokoro', indicf5: 'IndicF5' }[engine] ?? engine
+  return { 'qwen3-tts': 'Qwen3-TTS', chatterbox: 'Chatterbox', kokoro: 'Kokoro', indicf5: 'IndicF5', 'prompt-assist': 'Assistant' }[engine] ?? engine
 }
 
 export function timeAgo(iso: string): string {

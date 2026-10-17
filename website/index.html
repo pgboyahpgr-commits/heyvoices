@@ -4,10 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HeyVoices — Local Voice Studio</title>
-  <meta name="description" content="HeyVoices is a fully-local AI voice studio for your own GPU. Clone any voice from a few seconds of audio or video, generate speech in 35+ languages — including 11 Indian languages — design new voices, and batch-produce voice lines — with zero cloud, zero accounts, zero uploads." />
+  <meta name="description" content="HeyVoices is a fully-local AI voice studio for your own GPU. Clone any voice from a few seconds of audio or video, generate speech in 35+ languages — including 11 Indian languages — direct every line with one-click emotions and a local prompt assistant, design new voices, and batch-produce voice lines — with zero cloud, zero accounts, zero uploads." />
   <meta name="theme-color" content="#0b0d0f" />
   <meta property="og:title" content="HeyVoices — Local Voice Studio" />
-  <meta property="og:description" content="Clone any voice from a few seconds of audio or video. Generate speech in 35+ languages, including 11 Indian languages. 100% local — no cloud, no accounts, no uploads." />
+  <meta property="og:description" content="Clone any voice from a few seconds of audio or video. Generate speech in 35+ languages, including 11 Indian languages, with one-click emotions and a local prompt assistant. 100% local — no cloud, no accounts, no uploads." />
   <meta property="og:type" content="website" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="apple-touch-icon" href="icon.png" />
@@ -29,6 +29,7 @@
       </a>
       <div class="nav-links">
         <a href="#voices">Voices</a>
+        <a href="#emotions">Emotions</a>
         <a href="#features">Features</a>
         <a href="#how">How it works</a>
         <a href="#download">Download</a>
@@ -49,8 +50,8 @@
           <h1>Your own voice studio.<br /><span class="grad">Fully local.</span></h1>
           <p class="hero-sub">
             HeyVoices turns your PC into an ElevenLabs-style voice studio: clone any voice from a few
-            seconds of audio or video, generate speech in 35+ languages — including Telugu, Tamil and Hindi — and batch-produce voice lines
-            for videos, games, audiobooks and apps.
+            seconds of audio or video, generate speech in 35+ languages — including Telugu, Tamil and Hindi — direct
+            every line with one-click emotions, and batch-produce voice lines for videos, games, audiobooks and apps.
           </p>
           <div class="hero-ctas">
             <a class="btn btn-primary" href="#download">
@@ -66,6 +67,7 @@
             <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Nothing leaves your PC</span>
             <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg> Open-licensed engines</span>
             <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2"/></svg> Runs on 8 GB VRAM</span>
+            <span class="chip"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg> 15 one-click emotions</span>
           </div>
         </div>
 
@@ -101,6 +103,12 @@
                   <span class="mock-chip">English</span>
                   <span class="mock-chip">Auto model</span>
                   <span class="mock-gen">Generate</span>
+                </div>
+                <div class="mock-emotions">
+                  <span class="mock-chip on">🤩 Excited</span>
+                  <span class="mock-chip">🤫 Whisper</span>
+                  <span class="mock-chip">📖 Narration</span>
+                  <span class="mock-chip">✨ Craft prompt</span>
                 </div>
               </div>
               <div class="mock-take">
@@ -201,6 +209,19 @@
             same voice speaks all 11 Indian languages — only the text changes.
           </p>
         </div>
+        <div class="lang-chips reveal" aria-label="Supported Indian languages">
+          <span class="lang-chip">తెలుగు <em>Telugu</em></span>
+          <span class="lang-chip">தமிழ் <em>Tamil</em></span>
+          <span class="lang-chip">हिन्दी <em>Hindi</em></span>
+          <span class="lang-chip">ଓଡ଼ିଆ <em>Odia</em></span>
+          <span class="lang-chip">ಕನ್ನಡ <em>Kannada</em></span>
+          <span class="lang-chip">മലയാളം <em>Malayalam</em></span>
+          <span class="lang-chip">मराठी <em>Marathi</em></span>
+          <span class="lang-chip">ਪੰਜਾਬੀ <em>Punjabi</em></span>
+          <span class="lang-chip">ગુજરાતી <em>Gujarati</em></span>
+          <span class="lang-chip">বাংলা <em>Bengali</em></span>
+          <span class="lang-chip">অসমীয়া <em>Assamese</em></span>
+        </div>
         <div class="voices-grid">
           <article class="voice-card reveal" data-src="audio/telugu.mp3">
             <button class="voice-play" aria-label="Play Kavya Telugu sample">
@@ -242,6 +263,61 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           IndicF5 is gated on Hugging Face: click “Agree and access repository” once on its model page and paste a free read token in Settings — the app walks you through it.
         </p>
+
+        <div class="lang-help reveal">
+          <div class="lh-item"><span class="lh-dot"></span><span><b>Zero setup.</b> Five Indian preset voices — Telugu, Tamil, Kannada, Marathi and Punjabi — are bundled; hit Generate and you&rsquo;re hearing one in seconds.</span></div>
+          <div class="lh-item"><span class="lh-dot"></span><span><b>Auto-detected.</b> Paste Telugu (or any Indic script) and HeyVoices recognises the language and routes it to IndicF5 on its own — no dropdowns required.</span></div>
+          <div class="lh-item"><span class="lh-dot"></span><span><b>One clone, all 11 languages.</b> Clone a speaker once; the same voice reads every Indian language — and you can mix languages line by line in Story mode.</span></div>
+        </div>
+        <div class="code-card reveal">
+          <div class="code-head"><span class="cd"></span> Local API — Telugu in, WAV out (for your apps &amp; agents)</div>
+          <pre><code><span class="cc">curl</span> -s http://127.0.0.1:17300/speak \
+  -H <span class="cs">"Content-Type: application/json"</span> \
+  -d <span class="cs">'{"text": "నమస్కారం! ఇది హేవాయిసెస్.", "voice": "Kavya", "language": "te"}'</span> \
+  -o telugu.wav</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ emotions -->
+    <section id="emotions">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <div class="sec-kicker">Direction, not guesswork</div>
+          <h2>Pick an emotion. The assistant writes the direction.</h2>
+          <p class="sec-sub">
+            Fifteen one-click emotions set the delivery instantly. Want it sharper for this exact script?
+            A small local LLM (Qwen3, Apache-2.0) reads your script + the emotion and writes the precise
+            delivery prompt the voice engine understands — and can tidy your script with punctuation and
+            natural pauses. Runs on your GPU, 100% offline.
+          </p>
+        </div>
+        <div class="emo-demo reveal">
+          <div class="emo-chips" id="emoChips" role="tablist" aria-label="Emotion presets">
+            <button type="button" class="emo-chip on" data-emo="excited">🤩 Excited</button>
+            <button type="button" class="emo-chip" data-emo="whisper">🤫 Whisper · తెలుగు</button>
+            <button type="button" class="emo-chip" data-emo="narration">📖 Narration</button>
+            <button type="button" class="emo-chip" data-emo="gaming">🎮 Game NPC</button>
+            <button type="button" class="emo-chip" data-emo="news">📰 News</button>
+            <button type="button" class="emo-chip" data-emo="devotional">🪔 Devotional · తెలుగు</button>
+          </div>
+          <div class="emo-row">
+            <div class="emo-k">Script</div>
+            <div class="emo-script" id="emoScript">&ldquo;Halt! Who goes there? Oh, it is you. We have been waiting for a hero.&rdquo;</div>
+          </div>
+          <div class="emo-arrow">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
+            The assistant writes the delivery prompt
+          </div>
+          <div class="emo-row">
+            <div class="emo-k">Engine prompt</div>
+            <div class="emo-prompt" id="emoPrompt">&ldquo;Speak with high energy and real enthusiasm, a quick and rhythmic pace, bright rising intonation, and a punchy emphasis on the key words.&rdquo;</div>
+          </div>
+          <div class="emo-foot">
+            Prompts above were written by the app&rsquo;s own assistant (Qwen3-0.6B) on a laptop GPU — the
+            chips are clickable, all six are real outputs. Optional toggle in Settings; no cloud, no API keys.
+          </div>
+        </div>
       </div>
     </section>
 
@@ -290,6 +366,16 @@
             <p>Single-GPU queue, live VRAM telemetry, one-click model unload — tuned to run comfortably on an RTX 4060 Laptop.</p>
           </div>
           <div class="feature reveal">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>
+            <h3>Emotions + AI prompt crafting</h3>
+            <p>15 one-click emotions — Excited, Whisper, Devotional, Game NPC and more. An optional small local LLM (Qwen3) turns your script + emotion into the exact delivery prompt, and tidies scripts with natural pauses.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></div>
+            <h3>Updates in the app</h3>
+            <p>HeyVoices checks for a new release at startup, shows what changed, and downloads + installs it from inside the app — no reinstall dance.</p>
+          </div>
+          <div class="feature reveal">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
             <h3>Private by construction</h3>
             <p>The backend binds to 127.0.0.1 only. Your audio, voices and text never leave your machine — there is no cloud to leak to.</p>
@@ -319,7 +405,7 @@
           <div class="step reveal">
             <div class="num">3</div>
             <h3>Generate anything</h3>
-            <p>Type, hit Generate, keep every take. Export WAV / MP3 / OGG / FLAC, subtitles, or a chaptered audiobook.</p>
+            <p>Type, hit Generate — keep every take. Optionally let the assistant craft the delivery or tidy the script. Export WAV / MP3 / OGG / FLAC, subtitles, or a chaptered audiobook.</p>
           </div>
         </div>
       </div>
@@ -416,7 +502,7 @@
       </div>
       <div class="foot-bottom">
         <span class="built">Built by GeethuDino</span>
-        <span>Engines: Qwen3-TTS · Chatterbox · IndicF5 · Kokoro — Apache-2.0 / MIT</span>
+        <span>Engines: Qwen3-TTS · Chatterbox · IndicF5 · Kokoro + Qwen3 prompt assistant — Apache-2.0 / MIT</span>
         <span>100% local · no cloud · no accounts</span>
       </div>
     </div>

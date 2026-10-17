@@ -208,6 +208,30 @@ Renders a script where **each line picks its own voice**, then stitches everythi
 `params.line_timings` (`[{ "voice_name", "text", "start", "end" }]` — exact per-line offsets
 used by the subtitle export).
 
+### `POST /assist` — prompt assistant (small local LLM)
+Turns a script + a chosen emotion into the delivery prompt instruct-capable engines understand
+(`instruct` mode), or tidies a script with punctuation and natural `[[pause:…]]` markers
+(`tidy` mode). Runs as a normal queue job (never competes with a render for VRAM) and needs a
+**Prompt Assistant** model from the Models page (Qwen3 0.6B/1.7B, Apache-2.0, fully offline).
+```json
+{
+  "mode": "instruct",              // "instruct" | "tidy"
+  "text": "Halt! Who goes there? …",
+  "emotion": "Excited",            // "" → the assistant infers one from the script
+  "emotion_hint": "high energy …", // the preset's canned line (steers the LLM)
+  "language": "te",                // script-language hint
+  "voice": "Kavya",                // voice name (flavors the wording)
+  "notes": "…"                     // optional extra direction (the Studio passes the current instruct)
+}
+```
+→ `{ "job_id": "e5f6..." }`. On success `result` is:
+```json
+{ "mode": "instruct", "instruct": "Speak with high energy …", "model": "Prompt Assistant 0.6B" }
+{ "mode": "tidy", "text": "Tidied script …", "changed": true, "rejected": null }
+```
+Tidy results are guarded: if the model changes the script too much (length, lost script/words),
+the **original text** is returned with `changed: false` and a `rejected` reason.
+
 ### `GET /generations?limit=100&batch_id=…`
 Newest first. Each record includes `file`, `duration`, `peaks` (96 values for waveform
 sparklines), `engine`, `model`, `params`.
@@ -293,6 +317,39 @@ the usual `model` SSE events.
 
 ### `POST /models/unload`
 Unloads every loaded model from VRAM.
+
+## App updates
+
+These power **Settings → App updates**. They are the only calls that talk to GitHub
+(`GET` release metadata, then a download straight from the release asset).
+
+### `GET /update/check`
+Compares the running `VERSION` with the latest GitHub release (cached 60 s):
+```json
+{ "ok": true, "current": "0.2.0", "latest": "0.3.0", "update_available": true,
+  "release_name": "HeyVoices 0.3.0", "release_url": "https://github.com/…/releases/tag/v0.3.0",
+  "notes": "…release body (truncated)…", "published_at": "2026-10-17T04:53:28Z",
+  "asset": { "name": "HeyVoices Setup 0.3.0.exe", "url": "https://github.com/…",
+             "size": 173426251 },
+  "auto_install": true, "repo": "pgboyahpgr-commits/heyvoices" }
+```
+Offline / rate-limited: `{ "ok": false, "error": "Could not reach GitHub — …" }`.
+Repo without releases: `ok: true` with `no_releases: true`.
+
+### `POST /update/download`
+`{ "url": "…", "name": "HeyVoices Setup 0.3.0.exe", "size": 173426251 }` — from the check
+result. Streams the installer into `data/updates/` (only github.com / *.githubusercontent.com
+URLs are accepted), validates the size and the Windows `MZ` header, and reports progress on
+the SSE `update` event:
+```json
+{ "type": "update", "data": { "phase": "download", "progress": 0.42, "received": 72843264, "total": 173426251 } }
+```
+→ on success `{ "file": "D:\\…\\data\\updates\\HeyVoices Setup 0.3.0.exe", "name": "…", "size": 173426251 }`.
+
+### `POST /update/install`
+`{ "file": "…" }` — must live inside `data/updates/`. Launches the installer **detached**
+(Windows only), so the app can quit while it replaces the files:
+→ `{ "launched": true, "file": "…" }`.
 
 ## Errors
 Non-2xx responses carry `{ "detail": "human readable message" }` — surfaced verbatim as toasts

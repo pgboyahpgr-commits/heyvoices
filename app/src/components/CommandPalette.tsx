@@ -1,7 +1,7 @@
 // Command palette (Ctrl+K): jump anywhere, run quick actions.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  BookOpen, Box, Braces, Compass, CornerDownLeft, FolderOpen, Layers, Search,
+  BookOpen, Box, Braces, Compass, CornerDownLeft, Download, FolderOpen, Layers, Search,
   Settings2, Sparkles, Users, Wand2, Zap,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -80,6 +80,11 @@ export default function CommandPalette() {
           try { await api.unloadAll(); toast('info', 'All models unloaded'); useApp.getState().refreshInfo() }
           catch { toast('error', 'Could not unload models') }
         },
+      },
+      {
+        id: 'check-update', label: 'Check for updates', hint: 'Action', icon: <Download size={15} />,
+        keywords: 'update upgrade new version release github check',
+        run: () => { setPage('settings'); setOpen(false); useApp.getState().checkUpdate({ manual: true }) },
       },
       {
         id: 'open-models', label: 'Open models folder', hint: 'Files', icon: <FolderOpen size={15} />,

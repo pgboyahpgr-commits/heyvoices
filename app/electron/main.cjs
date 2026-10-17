@@ -167,6 +167,12 @@ ipcMain.handle('open-external', async (_e, url) => {
   if (typeof url === 'string' && /^https?:\/\//i.test(url)) return shell.openExternal(url)
   return false
 })
+// Update flow: the installer was spawned detached; give the renderer's toast a
+// moment to paint, then quit so the installer can replace the app files.
+ipcMain.handle('quit-app', () => {
+  setTimeout(() => app.quit(), 600)
+  return true
+})
 
 app.whenReady().then(async () => {
   await ensureBackend()

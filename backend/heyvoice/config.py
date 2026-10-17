@@ -17,19 +17,21 @@ WHISPER_DIR = MODELS_DIR / "whisper"
 OUTPUTS_DIR = DATA_DIR / "outputs"
 VOICES_DIR = DATA_DIR / "voices"
 UPLOADS_DIR = DATA_DIR / "uploads"
+UPDATES_DIR = DATA_DIR / "updates"
 DB_PATH = DATA_DIR / "heyvoice.db"
 SETTINGS_PATH = DATA_DIR / "settings.json"
 
 HOST = os.environ.get("HEYVOICE_HOST", "127.0.0.1")
 PORT = int(os.environ.get("HEYVOICE_PORT", "17300"))
 VERSION = "0.2.0"
+GITHUB_REPO = "pgboyahpgr-commits/heyvoices"
 
 # Make every HuggingFace-based engine cache into models/hf so the whole app
 # is self-contained inside the project folder.
 os.environ.setdefault("HF_HOME", str(HF_HOME))
 os.environ.setdefault("PYTHONUTF8", "1")
 
-for _d in (DATA_DIR, MODELS_DIR, HF_HOME, WHISPER_DIR, OUTPUTS_DIR, VOICES_DIR, UPLOADS_DIR):
+for _d in (DATA_DIR, MODELS_DIR, HF_HOME, WHISPER_DIR, OUTPUTS_DIR, VOICES_DIR, UPLOADS_DIR, UPDATES_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_SETTINGS: dict = {
@@ -44,6 +46,8 @@ DEFAULT_SETTINGS: dict = {
     "vram_budget_gb": 6.5,
     "transcribe_size": "small",      # whisper model used for reference transcripts
     "hf_token": "",                  # optional Hugging Face token (gated models like IndicF5)
+    "check_updates": True,           # silent update check against GitHub on app start
+    "prompt_assist": True,           # emotion chips + small-LLM prompt crafting in the Studio
     "pronunciations": [],            # [{"from": "HeyVoices", "to": "Hey Voice"}, ...]
 }
 

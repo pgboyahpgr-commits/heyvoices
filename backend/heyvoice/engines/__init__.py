@@ -9,6 +9,7 @@ from .base import EngineBase, EngineCaps, GenRequest  # noqa: F401
 from .chatterbox import ChatterboxEngine
 from .indicf5 import INDIC_LANGS, IndicF5Engine
 from .kokoro import KokoroEngine
+from .prompt_assist import PromptAssistEngine
 from .qwen3tts import Qwen3TTSEngine
 
 # ------------------------------------------------------------------ registry
@@ -17,6 +18,8 @@ ENGINES: dict[str, EngineBase] = {
     "chatterbox": ChatterboxEngine(),
     "kokoro": KokoroEngine(),
     "indicf5": IndicF5Engine(),
+    # not a speech engine — the small local LLM behind the prompt assistant
+    "prompt-assist": PromptAssistEngine(),
 }
 
 
@@ -120,6 +123,25 @@ CATALOG: dict[str, dict] = {
         "extra_repos": [
             {"repo": "charactr/vocos-mel-24khz", "revision": "0feb3fdd929bcd6649e0e7c5a688cf7dd012ef21"},
         ],
+    },
+    "qwen3-prompt-0.6b": {
+        "name": "Prompt Assistant 0.6B", "engine": "prompt-assist",
+        "repo": "Qwen/Qwen3-0.6B", "params": "0.6B",
+        "size_gb": 1.5, "vram_gb": 1.7, "license": "Apache-2.0",
+        "role": "Writes delivery prompts (optional)",
+        "description": "A tiny local LLM that turns your script + a chosen emotion into the "
+                       "delivery prompt the voice engines understand, and tidies scripts with "
+                       "natural pauses. Runs offline; the app works fine without it.",
+        "languages": ["en", "hi", "te", "ta", "kn", "ml", "mr", "or", "pa", "gu", "bn", "as"],
+    },
+    "qwen3-prompt-1.7b": {
+        "name": "Prompt Assistant 1.7B", "engine": "prompt-assist",
+        "repo": "Qwen/Qwen3-1.7B", "params": "1.7B",
+        "size_gb": 3.6, "vram_gb": 4.2, "license": "Apache-2.0",
+        "role": "Writes delivery prompts (best quality)",
+        "description": "Bigger sibling of the 0.6B assistant — richer wording and finer emotion "
+                       "nuance. Optional.",
+        "languages": ["en", "hi", "te", "ta", "kn", "ml", "mr", "or", "pa", "gu", "bn", "as"],
     },
 }
 

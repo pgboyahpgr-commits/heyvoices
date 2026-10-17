@@ -71,6 +71,54 @@
   window.addEventListener('scroll', onScroll, { passive: true })
   onScroll()
 
+  /* ---------- emotion demo (real assistant outputs) ---------- */
+  var EMO = {
+    excited: {
+      script: '\u201CHalt! Who goes there? Oh, it is you. We have been waiting for a hero.\u201D',
+      prompt: '\u201CSpeak with high energy and real enthusiasm, a quick and rhythmic pace, bright rising intonation, and a punchy emphasis on the key words.\u201D'
+    },
+    whisper: {
+      script: '\u201Cనమస్తే! ఈ రోజు మనం ఒక కొత్త విషయం గురించి మాట్లాడుకుందాం.\u201D',
+      prompt: '\u201CSpeak in a soft, breathy whisper with Kavya\u2019s gentle, intimate tone, maintaining a slow and rhythmic flow.\u201D'
+    },
+    narration: {
+      script: '\u201CThe wind carried the smell of rain across the valley, and for a moment, everything was still.\u201D',
+      prompt: '\u201CSpeak with warm, soothing tones, a gentle pace, and a soft, inviting intonation to convey the warmth of the audiobook narrator.\u201D'
+    },
+    gaming: {
+      script: '\u201CHalt! Who goes there? Oh, it is you. We have been waiting for a hero.\u201D',
+      prompt: '\u201CSpeak with dramatic intensity, theatrical flair, and full expression matching the character\u2019s tone, delivering the script with a controlled, immersive energy.\u201D'
+    },
+    news: {
+      script: '\u201CGood evening. Heavy rain is expected across the region tonight, with winds picking up after midnight.\u201D',
+      prompt: '\u201CSpeak with crisp confidence, a steady pace, and a clear, confident delivery of the key phrases.\u201D'
+    },
+    devotional: {
+      script: '\u201Cసర్వే జనాః సుఖినో భవంతు. శాంతి, సౌఖ్యం, సమృద్ధి అందరికీ లభించాలి.\u201D',
+      prompt: '\u201CSpeak with a calm, respectful tone, slow and deliberate pacing, maintaining a soft, heartfelt resonance throughout the script.\u201D'
+    }
+  }
+
+  var emoChips = Array.prototype.slice.call(document.querySelectorAll('.emo-chip'))
+  var emoScript = document.getElementById('emoScript')
+  var emoPrompt = document.getElementById('emoPrompt')
+
+  emoChips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      emoChips.forEach(function (c) { c.classList.remove('on') })
+      chip.classList.add('on')
+      var d = EMO[chip.getAttribute('data-emo')]
+      if (!d || !emoScript || !emoPrompt) return
+      emoScript.textContent = d.script
+      emoPrompt.textContent = d.prompt
+      ;[emoScript, emoPrompt].forEach(function (el) {
+        el.classList.remove('flash')
+        void el.offsetWidth
+        el.classList.add('flash')
+      })
+    })
+  })
+
   /* ---------- reveal on scroll ---------- */
   if ('IntersectionObserver' in window) {
     var io = new IntersectionObserver(

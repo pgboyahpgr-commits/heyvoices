@@ -3,10 +3,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import re
 import shutil
 import subprocess
+import sys
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
 from pathlib import Path
 
@@ -16,8 +22,8 @@ from pydantic import BaseModel
 
 from . import events, jobs, store
 from .audio import analyze_reference, duration_of, prepare_clone_ref, to_wav24k
-from .config import (MODELS_DIR, OUTPUTS_DIR, UPLOADS_DIR, VERSION, VOICES_DIR,
-                     load_settings, save_settings)
+from .config import (GITHUB_REPO, MODELS_DIR, OUTPUTS_DIR, UPDATES_DIR, UPLOADS_DIR,
+                     VERSION, VOICES_DIR, load_settings, save_settings)
 from .engines import (CATALOG, ENGINES, disk_free_gb, get_engine, list_catalog,
                       model_state, unload_all, verify_model, _write_model_manifest)
 
@@ -128,6 +134,162 @@ def patch_settings(body: SettingsPatch) -> dict:
     settings = save_settings(body.patch)
     events.emit("settings", settings)
     return settings
+
+
+# ================================================================ app updates
+# Settings → App updates: check the latest GitHub release, download the
+# installer with SSE progress, then launch it detached so the app can quit
+# while it replaces the files. The only GitHub traffic is these three calls.
+_update_cache: dict = {"ts": 0.0, "data": None}
+
+
+def _version_tuple(v: str) -> tuple[int, ...]:
+    nums = [int(n) for n in re.findall(r"\d+", v)[:3]]
+    while len(nums) < 3:
+        nums.append(0)
+    return tuple(nums)
+
+
+def _latest_release() -> dict:
+    """Fetch (and briefly cache) the latest GitHub release for this app."""
+    if _update_cache["data"] is not None and time.time() - _update_cache["ts"] < 60:
+        return _update_cache["data"]
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
+        headers={"Accept": "application/vnd.github+json",
+                 "User-Agent": f"HeyVoices/{VERSION}"},
+    )
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    _update_cache.update(ts=time.time(), data=data)
+    return data
+
+
+@router.get("/update/check")
+def update_check() -> dict:
+    """Compare the running version against the latest GitHub release."""
+    try:
+        data = _latest_release()
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:  # repo exists but has no releases yet
+            return {"ok": True, "current": VERSION, "latest": None, "no_releases": True,
+                    "update_available": False, "repo": GITHUB_REPO}
+        return {"ok": False, "current": VERSION, "repo": GITHUB_REPO,
+                "error": f"GitHub replied with HTTP {exc.code} — try again later."}
+    except Exception:
+        return {"ok": False, "current": VERSION, "repo": GITHUB_REPO,
+                "error": "Could not reach GitHub — check your internet connection."}
+
+    tag = str(data.get("tag_name") or "").strip().lstrip("vV")
+    exes = [a for a in (data.get("assets") or [])
+            if str(a.get("name") or "").lower().endswith(".exe")]
+    pick = next((a for a in exes if "setup" in str(a.get("name")).lower()),
+                exes[0] if exes else None)
+    asset = None
+    if pick:
+        asset = {"name": pick.get("name"), "url": pick.get("browser_download_url"),
+                 "size": pick.get("size") or 0}
+    return {
+        "ok": True,
+        "current": VERSION,
+        "latest": tag or None,
+        "update_available": bool(tag) and _version_tuple(tag) > _version_tuple(VERSION),
+        "release_name": data.get("name") or (f"v{tag}" if tag else None),
+        "release_url": data.get("html_url") or f"https://github.com/{GITHUB_REPO}/releases",
+        "notes": (data.get("body") or "")[:5000],
+        "published_at": data.get("published_at"),
+        "asset": asset,
+        "auto_install": sys.platform == "win32",
+        "repo": GITHUB_REPO,
+    }
+
+
+class UpdateDownloadIn(BaseModel):
+    url: str
+    name: str = ""
+    size: int = 0
+
+
+@router.post("/update/download")
+def update_download(body: UpdateDownloadIn) -> dict:
+    """Stream the release installer into data/updates/ with SSE progress."""
+    url = body.url.strip()
+    host = (urllib.parse.urlparse(url).hostname or "").lower()
+    if not (host == "github.com" or host == "objects.githubusercontent.com"
+            or host.endswith(".githubusercontent.com")):
+        raise HTTPException(400, "Refusing to download from an unknown host.")
+
+    name = os.path.basename(body.name.strip())
+    name = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip(".-") or "HeyVoices-Setup.exe"
+    dest = UPDATES_DIR / name
+    part = dest.with_name(dest.name + ".part")
+    total = max(0, body.size)
+    got = 0
+    last = 0.0
+    events.emit("update", {"phase": "download", "progress": 0.0, "received": 0, "total": total})
+    req = urllib.request.Request(url, headers={"User-Agent": f"HeyVoices/{VERSION}",
+                                               "Accept": "application/octet-stream"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp, open(part, "wb") as fh:
+            total = int(resp.headers.get("Content-Length") or total or 0)
+            while True:
+                chunk = resp.read(1024 * 256)
+                if not chunk:
+                    break
+                fh.write(chunk)
+                got += len(chunk)
+                now = time.time()
+                if now - last >= 0.2:
+                    last = now
+                    events.emit("update", {
+                        "phase": "download",
+                        "progress": round(got / total, 4) if total else 0.0,
+                        "received": got, "total": total,
+                    })
+    except Exception as exc:
+        part.unlink(missing_ok=True)
+        events.emit("update", {"phase": "error", "error": f"Download failed: {exc}"})
+        raise HTTPException(502, f"Download failed: {exc}") from exc
+
+    if total and got != total:
+        part.unlink(missing_ok=True)
+        events.emit("update", {"phase": "error", "error": "The download ended early."})
+        raise HTTPException(502, f"Download ended early ({got} of {total} bytes). Try again.")
+    if name.lower().endswith(".exe"):
+        with open(part, "rb") as fh:
+            magic = fh.read(2)
+        if magic != b"MZ":
+            part.unlink(missing_ok=True)
+            events.emit("update", {"phase": "error", "error": "Not a valid Windows installer."})
+            raise HTTPException(502, "The downloaded file is not a valid Windows installer.")
+
+    os.replace(part, dest)
+    events.emit("update", {"phase": "done", "file": str(dest), "size": got})
+    return {"file": str(dest), "name": name, "size": got}
+
+
+class UpdateInstallIn(BaseModel):
+    file: str
+
+
+@router.post("/update/install")
+def update_install(body: UpdateInstallIn) -> dict:
+    """Launch a downloaded installer detached, so it survives the app quitting."""
+    path = Path(body.file).resolve()
+    try:
+        path.relative_to(UPDATES_DIR.resolve())
+    except ValueError as exc:
+        raise HTTPException(400, "Only installers downloaded by HeyVoices can be launched.") from exc
+    if not path.exists():
+        raise HTTPException(404, "Installer not found — download it again.")
+    if sys.platform != "win32":
+        raise HTTPException(400, "Automatic install is Windows-only — open the file manually.")
+    try:
+        subprocess.Popen([str(path)], close_fds=True,
+                         creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+    except OSError as exc:
+        raise HTTPException(500, f"Could not start the installer: {exc}") from exc
+    return {"launched": True, "file": str(path)}
 
 
 # ================================================================ models
@@ -537,6 +699,33 @@ def generate_story(body: StoryIn) -> dict:
     if not lines:
         raise HTTPException(400, "Add at least one line with text")
     job = jobs.submit("story", f"Story · {len(lines)} lines", **body.model_dump())
+    return {"job_id": job.id}
+
+
+class AssistIn(BaseModel):
+    mode: str = "instruct"        # instruct → delivery prompt | tidy → cleaned script
+    text: str = ""
+    emotion: str = ""
+    emotion_hint: str = ""
+    language: str = ""
+    voice: str = ""
+    notes: str = ""
+
+
+@router.post("/assist")
+def assist(body: AssistIn) -> dict:
+    """Queue a prompt-assistant job (small local LLM); poll the job for the result."""
+    if body.mode not in ("instruct", "tidy"):
+        raise HTTPException(400, "mode must be 'instruct' or 'tidy'")
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(400, "Write or paste a script first — the assistant reads it.")
+    label = "Writing prompt" if body.mode == "instruct" else "Tidying script"
+    job = jobs.submit(
+        "assist", label, mode=body.mode, text=text[:6000],
+        emotion=body.emotion.strip()[:80], emotion_hint=body.emotion_hint.strip()[:400],
+        language=body.language.strip()[:8], voice=body.voice.strip()[:80],
+        notes=body.notes.strip()[:600])
     return {"job_id": job.id}
 
 

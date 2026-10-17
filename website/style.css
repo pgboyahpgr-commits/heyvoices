@@ -317,6 +317,12 @@ h1 .grad {
 .mock-line.w72 { width: 72%; }
 .mock-line.w46 { width: 46%; }
 .mock-actions { display: flex; align-items: center; gap: 7px; margin-top: 14px; }
+.mock-emotions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mock-chip.on {
+  border-color: rgba(20, 184, 166, 0.5);
+  background: rgba(20, 184, 166, 0.16);
+  color: var(--accent-soft);
+}
 .mock-chip {
   padding: 4.5px 10px;
   border-radius: 8px;
@@ -552,6 +558,111 @@ footer { border-top: 1px solid var(--line); padding: 36px 0 44px; margin-top: 30
 }
 .foot-bottom .built { color: var(--accent-soft); font-weight: 600; }
 
+/* ---------- emotions demo ---------- */
+.emo-demo {
+  border-radius: 18px;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, rgba(20, 184, 166, 0.06), rgba(255, 255, 255, 0) 42%), var(--ink-850);
+  padding: 26px 28px;
+}
+.emo-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.emo-chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  font-weight: 550;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.emo-chip:hover { border-color: var(--line-strong); color: var(--fg); }
+.emo-chip:active { transform: scale(0.97); }
+.emo-chip.on {
+  border-color: rgba(20, 184, 166, 0.55);
+  background: rgba(20, 184, 166, 0.16);
+  color: var(--accent-soft);
+}
+.emo-row { display: flex; gap: 16px; align-items: flex-start; }
+.emo-k {
+  flex-shrink: 0;
+  width: 92px;
+  padding-top: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.emo-script { font-size: 14.5px; line-height: 1.55; }
+.emo-prompt { font-size: 13.5px; line-height: 1.6; color: var(--accent-soft); }
+.emo-arrow {
+  margin: 13px 0 13px 108px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.emo-arrow svg { color: var(--accent-soft); }
+.emo-foot {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.emo-script.flash, .emo-prompt.flash { animation: emoflash 0.4s ease; }
+@keyframes emoflash {
+  0% { opacity: 0; transform: translateY(3px); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* ---------- Indian languages: chips, bullets, code ---------- */
+.lang-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: -10px 0 26px; }
+.lang-chip {
+  padding: 5px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13.5px;
+}
+.lang-chip em { font-style: normal; color: var(--fg-dim); font-size: 11px; margin-left: 5px; }
+.lang-help { display: grid; gap: 10px; margin-top: 20px; }
+.lh-item { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; color: var(--fg-muted); }
+.lh-item b { color: var(--fg); font-weight: 600; }
+.lh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 8px; flex-shrink: 0; }
+.code-card {
+  margin-top: 22px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--ink-950);
+  overflow: hidden;
+}
+.code-head {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--fg-dim);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.code-head .cd { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.code-card pre {
+  margin: 0;
+  padding: 16px 18px;
+  overflow-x: auto;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--fg);
+}
+.code-card .cc { color: var(--accent-soft); }
+.code-card .cs { color: #93c5fd; }
+
 /* ---------- reveal on scroll ---------- */
 .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.55s ease, transform 0.55s ease; }
 .reveal.in { opacity: 1; transform: translateY(0); }
@@ -574,4 +685,7 @@ footer { border-top: 1px solid var(--line); padding: 36px 0 44px; margin-top: 30
   .wrap { padding: 0 18px; }
   section { padding: 54px 0; }
   .hero-ctas .btn { flex: 1; justify-content: center; }
+  .emo-demo { padding: 20px; }
+  .emo-row { flex-direction: column; gap: 4px; }
+  .emo-arrow { margin-left: 0; }
 }

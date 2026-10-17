@@ -624,10 +624,47 @@ def h_transcribe(job: Job, p: dict) -> None:
     job.set_progress(1.0, "done")
 
 
+# Prompt assistant: script + emotion -> the delivery prompt engines understand.
+ASSIST_PREFERENCE = ["qwen3-prompt-1.7b", "qwen3-prompt-0.6b"]
+
+
+def h_assist(job: Job, p: dict) -> None:
+    mode = p.get("mode") or "instruct"
+    text = (p.get("text") or "").strip()
+    if not text:
+        raise RuntimeError("Write or paste a script first — the assistant reads it.")
+
+    model_key = next((m for m in ASSIST_PREFERENCE if _is_ready(m)), None)
+    if not model_key:
+        raise RuntimeError(
+            "The prompt assistant isn't installed yet. Open the Models page and download "
+            "'Prompt Assistant 0.6B' (1.5 GB) — or turn the assistant off in Settings.")
+    job.set_progress(0.15, "loading assistant")
+    ensure_model("prompt-assist", model_key)
+    engine = get_engine("prompt-assist")
+    job.check_canceled()
+    job.set_progress(0.4, "thinking")
+
+    if mode == "tidy":
+        res = engine.tidy_script(text=text, language=p.get("language") or "")
+        job.set_progress(0.95, "done")
+        job.result = {"mode": "tidy", "text": res["text"], "changed": res["changed"],
+                      "rejected": res.get("rejected"), "model": CATALOG[model_key]["name"]}
+    else:
+        instruct = engine.craft_instruct(
+            text=text, emotion=p.get("emotion") or "", emotion_hint=p.get("emotion_hint") or "",
+            language=p.get("language") or "", voice=p.get("voice") or "",
+            notes=p.get("notes") or "")
+        job.set_progress(0.95, "done")
+        job.result = {"mode": "instruct", "instruct": instruct,
+                      "model": CATALOG[model_key]["name"]}
+
+
 HANDLERS: dict[str, Callable[[Job, dict], None]] = {
     "generate": h_generate,
     "story": h_story,
     "transcribe": h_transcribe,
+    "assist": h_assist,
 }
 
 

@@ -59,6 +59,11 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   Kannada, Malayalam, Marathi, Punjabi, Gujarati, Bengali, Assamese, Hindi).
 - **Delivery control** — natural-language instructions (`speak slowly, whisper`) for Qwen preset
   voices; emotion-exaggeration slider and expressive tags (`[laugh]`, `[whisper]`) for Chatterbox.
+- **Emotion presets + prompt assistant** — 15 one-click emotions (Excited, Whisper, Narration,
+  Devotional, Game NPC…). Picking one applies a tuned delivery line instantly; a **small local LLM**
+  (**Qwen3 0.6B/1.7B**, Apache-2.0, optional) refines it into a script-aware prompt for the engine
+  and can **tidy your script** — punctuation and natural pauses, with hard guards so your words,
+  language and script are never changed. Toggleable in Settings (default on), fully offline.
 - **Script mode** — `[[pause:600ms]]` markers, automatic sentence-aware chunking, crossfade
   stitching, loudness normalization to −16 LUFS, plus find→replace **pronunciation rules**
   ("HeyVoices" → "Hey Voice") applied to every generation.
@@ -74,8 +79,12 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   reorder, and clear-queue — canceled renders stop between chunks and clean up after themselves.
 - **Model integrity** — verify any downloaded model against its recorded file manifest (catches
   interrupted downloads) and repair it with a resumable re-download of just the missing files.
+- **In-app updates** — Settings → App updates checks GitHub for a newer release, downloads the
+  installer with live progress and launches it for you (the app closes, updates, reopens). A new
+  version is flagged with a dot on Settings and a quiet toast at startup. Your voices, takes,
+  models and settings are never touched.
 - **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
-  open folders…).
+  open folders, check for updates…).
 - **Guided tour** — a first-run walkthrough spotlights the sidebar, composer, voice rail, takes,
   player and every page (clone, story, batch, models). Replay it anytime from the sidebar footer,
   Settings → About, or `Ctrl+K`.
@@ -115,6 +124,8 @@ First launch: open **Models** and download the recommended set
 drop in a short clip, and hit **Generate** in the Studio. For the 11 Indian languages add
 **IndicF5** too (~1.6 GB) — it is gated on Hugging Face: click “Agree and access repository”
 once on its model page (free account) and paste a read token in **Settings → Hugging Face**.
+For the Emotion presets + AI prompt crafting, add **Prompt Assistant 0.6B** (~1.5 GB, optional) —
+or grab it right from the Studio's Delivery panel.
 
 ### Install it (no dev tools)
 

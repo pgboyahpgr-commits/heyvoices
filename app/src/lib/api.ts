@@ -1,6 +1,7 @@
 // Tiny API client for the local HeyVoices backend.
 import type {
-  Generation, IngestResult, JobInfo, ModelInfo, Settings, SystemInfo, VerifyResult, Voice, VramInfo,
+  Generation, IngestResult, JobInfo, ModelInfo, Settings, SystemInfo, UpdateCheck,
+  VerifyResult, Voice, VramInfo,
 } from './types'
 
 export const BASE = 'http://127.0.0.1:17300'
@@ -78,6 +79,8 @@ export const api = {
     fetch(`${BASE}/generate`, { method: 'POST', headers: json, body: JSON.stringify(body) }).then((r) => j<{ job_id: string }>(r)),
   generateStory: (body: Record<string, any>) =>
     fetch(`${BASE}/generate/story`, { method: 'POST', headers: json, body: JSON.stringify(body) }).then((r) => j<{ job_id: string }>(r)),
+  assist: (body: { mode: 'instruct' | 'tidy'; text: string; emotion?: string; emotion_hint?: string; language?: string; voice?: string; notes?: string }) =>
+    fetch(`${BASE}/assist`, { method: 'POST', headers: json, body: JSON.stringify(body) }).then((r) => j<{ job_id: string }>(r)),
   exportBatchUrl: (batchId: string) => `${BASE}/generations/export?batch_id=${encodeURIComponent(batchId)}`,
   job: (id: string) => fetch(`${BASE}/jobs/${id}`).then((r) => j<JobInfo>(r)),
   generations: (limit = 100) => fetch(`${BASE}/generations?limit=${limit}`).then((r) => j<Generation[]>(r)),
@@ -90,6 +93,15 @@ export const api = {
   settings: () => fetch(`${BASE}/settings`).then((r) => j<Settings>(r)),
   patchSettings: (patch: Partial<Settings>) =>
     fetch(`${BASE}/settings`, { method: 'PATCH', headers: json, body: JSON.stringify({ patch }) }).then((r) => j<Settings>(r)),
+
+  // app updates
+  updateCheck: () => fetch(`${BASE}/update/check`, ping(15000)).then((r) => j<UpdateCheck>(r)),
+  updateDownload: (body: { url: string; name: string; size?: number }) =>
+    fetch(`${BASE}/update/download`, { method: 'POST', headers: json, body: JSON.stringify(body) })
+      .then((r) => j<{ file: string; name: string; size: number }>(r)),
+  updateInstall: (file: string) =>
+    fetch(`${BASE}/update/install`, { method: 'POST', headers: json, body: JSON.stringify({ file }) })
+      .then((r) => j<{ launched: boolean; file: string }>(r)),
 }
 
 export const fileUrl = (rel: string) => `${BASE}/files/outputs/${rel}`

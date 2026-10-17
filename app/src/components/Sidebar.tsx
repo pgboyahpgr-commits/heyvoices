@@ -48,10 +48,14 @@ export default function Sidebar() {
   const voices = useApp((s) => s.voices)
   const liveJob = useApp((s) => s.job)
   const toast = useApp((s) => s.toast)
+  const update = useApp((s) => s.update)
+  const updatePhase = useApp((s) => s.updatePhase)
 
   const gpu = info?.gpu
   const loaded = Object.values(info?.engines_loaded ?? {})
   const cloned = voices.filter((v) => v.kind !== 'preset').length
+  const showUpdateDot = !!update?.update_available
+    || updatePhase.status === 'downloading' || updatePhase.status === 'ready'
 
   // ---- live VRAM telemetry (2 s poll + sparkline) ----
   const [vram, setVram] = useState<VramInfo | null>(null)
@@ -163,6 +167,12 @@ export default function Sidebar() {
                       <span className="rounded-full bg-white/[0.06] px-1.5 py-px text-[10px] tabular-nums text-fg-muted">
                         {cloned}
                       </span>
+                    )}
+                    {item.id === 'settings' && showUpdateDot && (
+                      <span
+                        className="pulse-dot h-[7px] w-[7px] rounded-full bg-accent text-accent"
+                        title={updatePhase.status === 'ready' ? 'Update downloaded — ready to install' : 'A new version of HeyVoices is available'}
+                      />
                     )}
                   </button>
                 )
