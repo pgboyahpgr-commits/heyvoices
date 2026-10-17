@@ -105,6 +105,7 @@ Run the script yourself after setup to compare on your hardware.
 | Chatterbox Multilingual — clone + `[laugh]` tags | ✅ | 6.4 s speech in ~22 s first run |
 | Qwen3-TTS 1.7B VoiceDesign — description → voice | ✅ | 5.9 s speech in ~26 s first run, saved as a new voice |
 | IndicF5 — 11 Indian languages, cloned voice (te/ta/or/hi/ml/bn verified) | ✅ | 4.3 s speech in ~5.9 s (RTF ≈ 1.4×, model load ~6 s); ~1.4 GB VRAM; Telugu/Tamil round-trip ASR similarity 0.96–0.97 |
+| Story with mixed languages (en + te, one clone, engine switch per line) | ✅ | 3 lines stitched in ~35 s warm; Telugu line auto-routed to IndicF5 mid-story |
 
 **Disk notes:** HuggingFace repos carry more than the runtime weights — `ResembleAI/chatterbox`
 pulls ~16 GB (all variants + dev artifacts) and VoiceDesign ~9 GB on disk. Disk is only needed

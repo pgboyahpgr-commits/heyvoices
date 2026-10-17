@@ -146,8 +146,9 @@ Changing samples invalidates the cached clone prompt automatically.
   "voice_id": "a1b2c3d4e5f6",     // omit + "design": true for VoiceDesign
   "engine": null,                  // "qwen3-tts" | "chatterbox" | "indicf5" | "kokoro" (optional)
   "model": null,                   // explicit model id overrides everything
-  "language": "en",                // omit for the voice's language / auto. Indic text is detected
-                                   //   (te, ta, kn, ml, mr, or, pa, gu, bn, as, hi) and routed to IndicF5
+  "language": "en",                // omit for auto (text script overrides the voice's default).
+                                   //   Indic text is detected (te, ta, kn, ml, mr, or, pa, gu, bn, as, hi)
+                                   //   and routed to IndicF5
   "instruct": "whisper softly",    // Qwen preset voices / VoiceDesign
   "exaggeration": 0.6,             // Chatterbox emotion
   "temperature": 0.8,
@@ -241,6 +242,8 @@ PATCH: `{ "patch": { "favorite": true } }`. DELETE removes the row and its audio
 { "text": "Hello from my app!", "voice": "Narrator", "wait": true }
 ```
 - `voice`: voice **name** or id; omit to use your first cloned voice.
+- `language`: optional code (`"te"`, `"ta"`, `"hi"`, `"en"`, …); omit for auto (voice language →
+  script detection → default). Indian-language text or a language hint routes to IndicF5.
 - Blocks until the audio exists (queue-aware, 10-min ceiling), then:
 ```json
 { "file": "9a8b....wav", "url": "/files/outputs/9a8b....wav",

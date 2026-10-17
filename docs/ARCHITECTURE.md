@@ -40,8 +40,10 @@ heyvoice/
    fall back to Chatterbox; preset voices stay on their own engine); cloned → Qwen 0.6B Base →
    1.7B Base → Chatterbox; preset speakers → CustomVoice models; Kokoro presets → Kokoro.
    When the language is `auto`, the script of the text is detected (Devanagari, Gurmukhi, Tamil,
-   Telugu, Kannada, Malayalam, Odia, Gujarati, Bengali), so pasting Telugu just works.
-2. `ensure_model()` — unload other engines (auto-unload setting) and load the target with
+   Telugu, Kannada, Malayalam, Odia, Gujarati, Bengali) and overrides a mismatched voice default,
+   so pasting Telugu always reaches IndicF5 (or a clear prompt on voices that can't speak it).
+2. `ensure_model()` — unload other engines (auto-unload setting; the Whisper ASR model is freed
+   as well when a model with ≥5 GB needs the room) and load the target with
    `dtype=bfloat16` (CUDA) and `attn_implementation="sdpa"`.
 3. Chunk text (sentence-aware, honors `[[pause:600ms]]`) at `chunk_max_chars` (default 280).
 4. Generate each chunk; progress events (`0.05 → 0.85`) stream over SSE.

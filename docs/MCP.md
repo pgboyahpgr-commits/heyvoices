@@ -14,7 +14,7 @@ bridge to the local REST API on `127.0.0.1:17300`.
 | Tool | Arguments | Returns |
 | --- | --- | --- |
 | `list_voices` | — | All voices: `id`, `name`, `kind` (cloned/preset/designed), `language`, `engine`, `ref_clips` |
-| `speak` | `text`, `voice` (name or id, optional), `engine`, `model` | Waits for the render: `file`, `path` (absolute), `url`, `duration`, `voice` |
+| `speak` | `text`, `voice` (name or id, optional), `engine`, `model`, `language` | Waits for the render: `file`, `path` (absolute), `url`, `duration`, `voice` |
 | `start_generation` | `text`, `voice`, `language`, `model`, `output_format` | `{ "job_id": … }` — poll with `get_job` |
 | `get_job` | `job_id` | `status` (queued/running/done/error), `progress`, `message`, `error`, `result` |
 | `list_takes` | `limit` | Recent renders, newest first |
@@ -26,6 +26,8 @@ Notes:
   `[laugh]`, `[sigh]`, `[whisper]`.
 - Omit `voice` in `speak` to use the first cloned voice; `engine`/`model` override the voice's
   default engine (e.g. `"model": "chatterbox-turbo"`, `"engine": "kokoro"`).
+- `language` accepts codes like `te`, `ta`, `hi`, `en`; omit for auto (voice language → script
+  detection). Indian languages route to IndicF5 automatically.
 - `speak` blocks until the audio is ready (queue-aware, up to 10 min). Use
   `start_generation` + `get_job` for long texts.
 - Override the backend URL with the `HEYVOICE_API` environment variable if you changed ports.

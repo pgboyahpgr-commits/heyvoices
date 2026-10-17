@@ -94,6 +94,10 @@
       transcript; language-aware auto-routing + script detection, 5 bundled preset voices, vendored
       MIT inference code (`engines/vendor_f5/`), gated-download UX (HF terms accept + token in
       Settings) — verified end-to-end on the RTX 4060 (te/ta/or/hi/ml/bn generation, ASR round-trip)
+- [x] **Hardening pass (round 2)** — ref clip/transcript pairing + >15 s clip transcript trimming,
+      danda-aware Hindi/Marathi chunking, `ळ`-based Marathi detection, text-script override for auto
+      language (Telugu text on any voice reaches IndicF5), bounded Qwen3-TTS decode with an
+      unstable-output guard, `language` param on `/speak` + MCP `speak`
 - [ ] LuxTTS (style transfer) if licenses check out
 - [ ] k2-fsa OmniVoice (646 languages) as an optional heavyweight engine
 - [ ] Fine-tune wizard for Qwen3-TTS (LoRA on personal recordings)

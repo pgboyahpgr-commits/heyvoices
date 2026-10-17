@@ -190,6 +190,8 @@ def _start_model_download(model_id: str, meta: dict) -> bool:
             if gated:
                 payload["url"] = f"https://huggingface.co/{meta['repo']}"
             events.emit("model_error", payload)
+        finally:
+            _downloads.pop(model_id, None)
 
     t = threading.Thread(target=_run, name=f"dl-{model_id}", daemon=True)
     _downloads[model_id] = t
@@ -783,6 +785,7 @@ class SpeakIn(BaseModel):
     voice: str = ""            # voice name or id; fallback: first cloned voice
     engine: str | None = None
     model: str | None = None
+    language: str | None = None  # e.g. "te"; None = auto (voice -> script -> default)
     wait: bool = True
 
 
@@ -801,7 +804,7 @@ async def speak(body: SpeakIn) -> dict:
         voice = cloned[0] if cloned else None
     job = jobs.submit("generate", f"speak:{body.voice or 'default'}",
                       text=body.text, voice_id=(voice or {}).get("id"),
-                      engine=body.engine, model=body.model)
+                      engine=body.engine, model=body.model, language=body.language)
     if not body.wait:
         return {"job_id": job.id}
     ok = await asyncio.to_thread(job.done.wait, 600)

@@ -67,6 +67,25 @@ def preset_clip_path(file_name: str) -> Path | None:
     return p if p.exists() else None
 
 
+def _audio_duration(path: str) -> float:
+    """Duration in seconds (0.0 when the file can't be measured)."""
+    try:
+        import soundfile as sf
+
+        return float(sf.info(path).duration)
+    except Exception:
+        return 0.0
+
+
+def _trim_ref_text(text: str, ratio: float) -> str:
+    """Keep the leading share of a transcript that still matches a shortened clip."""
+    words = (text or "").split()
+    if ratio >= 0.95 or len(words) < 4:
+        return text
+    keep = max(2, min(len(words) - 1, int(round(len(words) * ratio))))
+    return " ".join(words[:keep])
+
+
 class IndicF5Engine(EngineBase):
     id = "indicf5"
     name = "IndicF5"
@@ -76,7 +95,7 @@ class IndicF5Engine(EngineBase):
         super().__init__()
         self._lock = threading.Lock()
         self.vocoder: Any = None
-        self._ref_cache: dict[str, str] = {}
+        self._ref_cache: dict[str, tuple[str, float]] = {}
         self._cache_dir: Path | None = None
 
     # ---- capabilities ---------------------------------------------
@@ -141,17 +160,22 @@ class IndicF5Engine(EngineBase):
             self._ref_cache.pop(k, None)
 
     # ---- reference conditioning -------------------------------------
-    def _prepared_ref(self, ref_audio: str, voice_key: str) -> str:
-        """Clip/trim/normalise the reference once per voice (upstream recipe)."""
+    def _prepared_ref(self, ref_audio: str, voice_key: str) -> tuple[str, float]:
+        """Clip/trim/normalise the reference once per voice (upstream recipe).
+
+        Returns (prepared wav, duration ratio). The ratio is ``prepared/full``
+        length — used to trim the transcript when a >15 s clip gets shortened,
+        so the conditioning text keeps matching the audio.
+        """
         from .vendor_f5 import infer_utils as f5
 
         src = Path(ref_audio)
         try:
             stamp = f"{voice_key}:{src.resolve()}:{src.stat().st_mtime_ns}"
         except OSError:
-            return ref_audio
+            return ref_audio, 1.0
         hit = self._ref_cache.get(stamp)
-        if hit and Path(hit).exists():
+        if hit and Path(hit[0]).exists():
             return hit
         if self._cache_dir is None:
             from ..config import MODELS_DIR
@@ -166,21 +190,36 @@ class IndicF5Engine(EngineBase):
                 Path(tmp).unlink(missing_ok=True)
             except OSError:
                 pass
+        ratio = 1.0
+        full, short = _audio_duration(str(src)), _audio_duration(str(out))
+        if full > 0.5 and short > 0:
+            ratio = max(0.15, min(1.0, short / full))
         if len(self._ref_cache) > 24:
             self._ref_cache.clear()
-        self._ref_cache[stamp] = str(out)
-        return str(out)
+        self._ref_cache[stamp] = (str(out), ratio)
+        return str(out), ratio
 
     # ---- generation --------------------------------------------------
     def generate(self, req: GenRequest) -> tuple[np.ndarray, int]:
         if self.model is None:
             raise RuntimeError("IndicF5 model is not loaded")
-        ref = req.ref_audio[0] if isinstance(req.ref_audio, list) and req.ref_audio else (
-            req.ref_audio if isinstance(req.ref_audio, str) else None)
-        ref_text = req.ref_text
-        if isinstance(ref_text, list):
-            ref_text = next((t for t in ref_text if t and t.strip()), "")
-        ref_text = (ref_text or "").strip()
+
+        # Pair every reference clip with its own transcript, then use the best
+        # one (~15 s of clean speech is the sweet spot for F5 conditioning).
+        audios = req.ref_audio if isinstance(req.ref_audio, list) else [req.ref_audio]
+        audios = [a for a in audios if a]
+        texts = req.ref_text if isinstance(req.ref_text, list) else [req.ref_text]
+        ref, ref_text, best = "", "", -1.0
+        for i, path in enumerate(audios):
+            text = ((texts[i] if i < len(texts) else "") or "").strip()
+            if not text:
+                continue
+            dur = _audio_duration(path)
+            score = min(dur, 15.0) if dur > 0 else 10.0
+            if score > best:
+                best, ref, ref_text = score, path, text
+        if not ref:
+            ref = audios[0] if audios else ""
         if not ref:
             raise RuntimeError("IndicF5 needs a reference clip — clone a voice (or pick an Indic preset) first.")
         if not ref_text:
@@ -193,7 +232,9 @@ class IndicF5Engine(EngineBase):
         if req.seed is not None:
             seed_everything(int(req.seed))
 
-        prepared = self._prepared_ref(ref, req.voice_key or "ref")
+        prepared, ratio = self._prepared_ref(ref, req.voice_key or "ref")
+        # when the clip was shortened to <=15 s, keep the matching share of the transcript
+        ref_text = _trim_ref_text(ref_text, ratio)
         speed = 1.0 if req.speed is None else float(min(2.0, max(0.5, req.speed)))
         cfg = 2.0 if req.cfg_weight is None else float(min(3.5, max(0.2, req.cfg_weight)))
         audio, sr, _ = f5.infer_process(

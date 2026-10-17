@@ -9,7 +9,7 @@ import numpy as np
 
 PAUSE_RE = re.compile(r"\[\[\s*pause\s*:\s*(\d+)\s*(ms)?\s*\]\]", re.IGNORECASE)
 TAG_RE = re.compile(r"\[[a-zA-Z][a-zA-Z ]{0,24}\]")  # keeps [laugh] etc. intact while splitting
-SENT_SPLIT = re.compile(r"(?<=[.!?\u3002\uff01\uff1f;\uff1b])\s+")
+SENT_SPLIT = re.compile(r"(?<=[.!?\u3002\uff01\uff1f;\uff1b\u0964\u0965])\s+")
 PATH_SEP = re.compile(r"[,;:\u2014-]\s+")
 
 

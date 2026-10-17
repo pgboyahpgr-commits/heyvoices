@@ -19,6 +19,7 @@ const TEMPLATES: { name: string; text: string }[] = [
   { name: 'Game NPC', text: "Halt! Who goes there? [[pause:300ms]] Oh… it's you. The whole village has been asking about you." },
   { name: 'Audiobook', text: 'The wind carried the smell of rain across the valley, and for a moment, everything was still.' },
   { name: 'Ad read', text: 'Stop scrolling. [[pause:250ms]] This is the last productivity tool you will ever need.' },
+  { name: 'Telugu sample', text: 'నమస్తే! [[pause:300ms]] ఈ రోజు మనం ఒక కొత్త విషయం గురించి మాట్లాడుకుందాం. ఇది చాలా ఆసక్తికరంగా ఉంటుంది.' },
 ]
 
 // Per-engine tuning knobs (mirrors backend capabilities). `auto` is the value

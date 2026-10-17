@@ -28,16 +28,34 @@ class WhisperASR:
                 self.device = "cuda" if torch.cuda.is_available() else "cpu"
             else:
                 self.device = device
-            compute = "float16" if self.device == "cuda" else "int8"
-            self.model = WhisperModel(size, device=self.device, compute_type=compute,
-                                      download_root=str(WHISPER_DIR))
+            try:
+                self.model = WhisperModel(
+                    size, device=self.device,
+                    compute_type="float16" if self.device == "cuda" else "int8",
+                    download_root=str(WHISPER_DIR))
+            except Exception:
+                if self.device == "cpu":
+                    raise
+                # GPU busy or out of memory (large TTS model loaded) — CPU works
+                self.device = "cpu"
+                self.model = WhisperModel(size, device="cpu", compute_type="int8",
+                                          download_root=str(WHISPER_DIR))
             self.size = size
 
     def transcribe(self, path: str | Path, language: str | None = None) -> str:
         if self.model is None:
             self.load()
         audio = self._load_16k_mono(path)
-        segments, _info = self.model.transcribe(audio, language=language, vad_filter=True)
+        try:
+            segments, _info = self.model.transcribe(audio, language=language, vad_filter=True)
+        except Exception:
+            if self.device == "cpu":
+                raise
+            # transcribe-time OOM (VRAM filled by a TTS model) — retry on CPU once
+            size = self.size or "small"
+            self.unload()
+            self.load(size=size, device="cpu")
+            segments, _info = self.model.transcribe(audio, language=language, vad_filter=True)
         return " ".join(seg.text.strip() for seg in segments).strip()
 
     @staticmethod

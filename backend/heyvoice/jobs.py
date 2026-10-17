@@ -197,18 +197,32 @@ def detect_script_language(text: str) -> str:
             if lo <= cp <= hi:
                 counts[lang] = counts.get(lang, 0) + 1
                 break
-    return max(counts, key=counts.get) if counts else ""
+    if not counts:
+        return ""
+    lang = max(counts, key=counts.get)
+    # Devanagari is shared by Hindi and Marathi — "ळ" (U+0933) is a strong
+    # Marathi marker (standard Hindi doesn't use it), and routing cares.
+    if lang == "hi" and "\u0933" in text:
+        return "mr"
+    return lang
 
 
 def effective_language(payload_lang: str | None, voice: dict | None, settings: dict,
                        text: str = "") -> str:
-    """Resolve 'auto' language: payload -> voice -> script detection -> default."""
+    """Resolve 'auto' language: payload -> voice -> script detection -> default.
+
+    When the request is auto, a clear script in the text overrides the voice's
+    declared language (e.g. Telugu typed while an English preset is selected),
+    so Indic text always reaches IndicF5. An explicit request always wins.
+    """
     language = (payload_lang or "").strip()
-    if not language or language == "auto":
+    explicit = bool(language) and language != "auto"
+    if not explicit:
         language = ((voice or {}).get("language") or "").strip()
+        detected = detect_script_language(text)
+        if detected and detected != language:
+            language = detected
     if not language or language == "auto":
-        language = detect_script_language(text)
-    if not language:
         language = settings.get("default_language") or "en"
     return language
 
@@ -294,6 +308,16 @@ def ensure_model(engine_id: str, model_key: str) -> None:
             if other.model is not None and not (other_id == engine_id and other.loaded_key == model_key):
                 other.unload()
                 events.emit("engine", {"engine": other_id, "loaded": False})
+        # ASR sits outside the engine registry — free its VRAM before loading a
+        # large TTS model (1.7B needs ~6.5 GB; an 8 GB card can't spare whisper).
+        try:
+            if float(CATALOG.get(model_key, {}).get("vram_gb") or 0) >= 5.0:
+                from .engines.whisper_asr import asr
+
+                if asr.model is not None:
+                    asr.unload()
+        except Exception:
+            pass
     engine.load(model_key)
     events.emit("engine", {"engine": engine_id, "model": model_key, "loaded": True})
 

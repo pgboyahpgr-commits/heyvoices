@@ -93,13 +93,16 @@ def list_voices() -> list[dict]:
 
 
 @server.tool()
-def speak(text: str, voice: str = "", engine: str = "", model: str = "") -> dict:
+def speak(text: str, voice: str = "", engine: str = "", model: str = "",
+          language: str = "") -> dict:
     """Generate speech now and wait for the finished file.
 
     text: the line to say; may include [[pause:500]] pauses and, on the
     chatterbox-turbo model, delivery tags like [laugh] or [sigh].
     voice: name or id from list_voices(); empty = first cloned voice.
     engine/model: optional overrides, e.g. engine="kokoro", model="chatterbox-turbo".
+    language: optional code like "te", "hi", "en"; empty = auto (voice language,
+    then script detection, then the app default).
     Returns file, absolute path on disk, url, duration (s) and the voice name.
     """
     body: dict = {"text": text, "wait": True}
@@ -109,6 +112,8 @@ def speak(text: str, voice: str = "", engine: str = "", model: str = "") -> dict
         body["engine"] = engine
     if model:
         body["model"] = model
+    if language:
+        body["language"] = language
     res = _api("POST", "/speak", body)
     if res.get("file"):
         base = _outputs_dir()

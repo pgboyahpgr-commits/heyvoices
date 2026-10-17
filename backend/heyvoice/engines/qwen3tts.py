@@ -155,6 +155,9 @@ class Qwen3TTSEngine(EngineBase):
             gen_kwargs["top_p"] = float(max(0.0, min(1.0, req.top_p)))
         if req.repetition_penalty is not None:
             gen_kwargs["repetition_penalty"] = float(max(1.0, min(2.5, req.repetition_penalty)))
+        # Hard bound on codec tokens (~12.5/s): if the model ever misses EOS the
+        # decode loop runs to the sequence-length cap and stalls the queue.
+        gen_kwargs.setdefault("max_new_tokens", max(1024, min(8192, len(req.text) * 8)))
         if req.seed is not None:
             import torch
 
@@ -184,4 +187,13 @@ class Qwen3TTSEngine(EngineBase):
             raise RuntimeError(f"Unknown Qwen3-TTS role {role}")
 
         audio = np.asarray(wavs[0], dtype=np.float32).squeeze()
+        dur = float(len(audio)) / max(1, int(sr))
+        # Legit speech stays well under ~0.5 s/char. Anything way over means the
+        # model didn't find a clean ending (typical when the reference clip's
+        # language doesn't match the text) — surface it instead of returning junk.
+        if dur > 4.0 + 0.5 * len(req.text):
+            raise RuntimeError(
+                f"Qwen3-TTS produced {dur:.0f}s of unstable audio for this {len(req.text)}-character line. "
+                "The reference clip probably doesn't match the text's language — use a reference clip in the "
+                "same language, or an IndicF5 voice for Indian languages.")
         return audio, int(sr)
