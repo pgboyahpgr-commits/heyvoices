@@ -59,10 +59,14 @@ jobs:
         run: |
           TAG="${{ inputs.tag || github.ref_name }}"
           for f in app/dist/*.exe app/dist/*.AppImage app/dist/*.deb app/dist/*.dmg app/dist/*.zip app/dist/*.blockmap; do
-            [ -e "$f" ] && gh release upload "$TAG" "$f" --clobber
+            if [ -e "$f" ]; then
+              echo "uploading $f"
+              gh release upload "$TAG" "$f" --clobber
+            fi
           done
 
       - name: Upload workflow artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: heyvoices-${{ matrix.os }}
