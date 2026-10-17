@@ -327,7 +327,7 @@ export default function Sidebar() {
           </button>
         )}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-fg-dim">v{info?.version ?? '0.3.0'} · fully local</span>
+          <span className="text-[10px] text-fg-dim">v{info?.version ?? '0.3.1'} · fully local</span>
           <button
             className="text-[10.5px] font-medium text-fg-dim transition-colors hover:text-accent-soft"
             onClick={() => setTourOpen(true)}

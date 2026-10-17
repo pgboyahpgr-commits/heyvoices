@@ -23,7 +23,7 @@ SETTINGS_PATH = DATA_DIR / "settings.json"
 
 HOST = os.environ.get("HEYVOICE_HOST", "127.0.0.1")
 PORT = int(os.environ.get("HEYVOICE_PORT", "17300"))
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 GITHUB_REPO = "pgboyahpgr-commits/heyvoices"
 
 # Make every HuggingFace-based engine cache into models/hf so the whole app

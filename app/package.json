@@ -1,7 +1,7 @@
 {
   "name": "heyvoices-app",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "productName": "HeyVoices",
   "description": "HeyVoices — fully-local AI voice studio (clone, design and generate voices on your own GPU). Built by GeethuDino.",
   "author": "GeethuDino",

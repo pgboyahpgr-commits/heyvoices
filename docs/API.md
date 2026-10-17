@@ -16,7 +16,7 @@ loopback). Interactive OpenAPI docs are always available at `/docs` while the ba
 
 ### `GET /health`
 ```json
-{ "status": "ok", "version": "0.3.0", "app": "HeyVoices" }
+{ "status": "ok", "version": "0.3.1", "app": "HeyVoices" }
 ```
 
 ### `GET /system/info`
@@ -327,25 +327,25 @@ These power **Settings → App updates**. They are the only calls that talk to G
 Compares the running `VERSION` with the latest GitHub release (cached 60 s; add
 `?force=1` to bypass the cache — the manual "Check for updates" button does):
 ```json
-{ "ok": true, "current": "0.2.0", "latest": "0.3.0", "update_available": true,
-  "release_name": "HeyVoices 0.3.0", "release_url": "https://github.com/…/releases/tag/v0.3.0",
+{ "ok": true, "current": "0.3.0", "latest": "0.3.1", "update_available": true,
+  "release_name": "HeyVoices 0.3.1", "release_url": "https://github.com/…/releases/tag/v0.3.1",
   "notes": "…release body (truncated)…", "published_at": "2026-10-17T04:53:28Z",
-  "asset": { "name": "HeyVoices Setup 0.3.0.exe", "url": "https://github.com/…",
-             "size": 173426251 },
+  "asset": { "name": "HeyVoices.Setup.0.3.1.exe", "url": "https://github.com/…",
+             "size": 175442230 },
   "auto_install": true, "repo": "pgboyahpgr-commits/heyvoices" }
 ```
 Offline / rate-limited: `{ "ok": false, "error": "Could not reach GitHub — …" }`.
 Repo without releases: `ok: true` with `no_releases: true`.
 
 ### `POST /update/download`
-`{ "url": "…", "name": "HeyVoices Setup 0.3.0.exe", "size": 173426251 }` — from the check
+`{ "url": "…", "name": "HeyVoices.Setup.0.3.1.exe", "size": 175442230 }` — from the check
 result. Streams the installer into `data/updates/` (only github.com / *.githubusercontent.com
 URLs are accepted), validates the size and the Windows `MZ` header, and reports progress on
 the SSE `update` event:
 ```json
-{ "type": "update", "data": { "phase": "download", "progress": 0.42, "received": 72843264, "total": 173426251 } }
+{ "type": "update", "data": { "phase": "download", "progress": 0.42, "received": 72843264, "total": 175442230 } }
 ```
-→ on success `{ "file": "D:\\…\\data\\updates\\HeyVoices Setup 0.3.0.exe", "name": "…", "size": 173426251 }`.
+→ on success `{ "file": "D:\\…\\data\\updates\\HeyVoices.Setup.0.3.1.exe", "name": "…", "size": 175442230 }`.
 
 ### `POST /update/install`
 `{ "file": "…" }` — must live inside `data/updates/`. Launches the installer **detached**
