@@ -95,7 +95,8 @@ export const api = {
     fetch(`${BASE}/settings`, { method: 'PATCH', headers: json, body: JSON.stringify({ patch }) }).then((r) => j<Settings>(r)),
 
   // app updates
-  updateCheck: () => fetch(`${BASE}/update/check`, ping(15000)).then((r) => j<UpdateCheck>(r)),
+  updateCheck: (force?: boolean) =>
+    fetch(`${BASE}/update/check${force ? '?force=1' : ''}`, ping(15000)).then((r) => j<UpdateCheck>(r)),
   updateDownload: (body: { url: string; name: string; size?: number }) =>
     fetch(`${BASE}/update/download`, { method: 'POST', headers: json, body: JSON.stringify(body) })
       .then((r) => j<{ file: string; name: string; size: number }>(r)),

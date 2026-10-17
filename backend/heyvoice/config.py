@@ -47,6 +47,7 @@ DEFAULT_SETTINGS: dict = {
     "transcribe_size": "small",      # whisper model used for reference transcripts
     "hf_token": "",                  # optional Hugging Face token (gated models like IndicF5)
     "check_updates": True,           # silent update check against GitHub on app start
+    "auto_download_updates": False,  # fetch a new installer in the background when one exists
     "prompt_assist": True,           # emotion chips + small-LLM prompt crafting in the Studio
     "pronunciations": [],            # [{"from": "HeyVoices", "to": "Hey Voice"}, ...]
 }

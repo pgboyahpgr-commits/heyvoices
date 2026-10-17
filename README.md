@@ -79,10 +79,10 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   reorder, and clear-queue — canceled renders stop between chunks and clean up after themselves.
 - **Model integrity** — verify any downloaded model against its recorded file manifest (catches
   interrupted downloads) and repair it with a resumable re-download of just the missing files.
-- **In-app updates** — Settings → App updates checks GitHub for a newer release, downloads the
-  installer with live progress and launches it for you (the app closes, updates, reopens). A new
-  version is flagged with a dot on Settings and a quiet toast at startup. Your voices, takes,
-  models and settings are never touched.
+- **In-app updates** — Settings → App updates checks GitHub for a newer release (also quietly at
+  startup), shows what's new, downloads the installer with live progress and launches it for you
+  (the app closes, updates, reopens). Optional background download, a sidebar pill and a
+  clickable toast flag new versions. Your voices, takes, models and settings are never touched.
 - **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
   open folders, check for updates…).
 - **Guided tour** — a first-run walkthrough spotlights the sidebar, composer, voice rail, takes,

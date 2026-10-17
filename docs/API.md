@@ -324,7 +324,8 @@ These power **Settings → App updates**. They are the only calls that talk to G
 (`GET` release metadata, then a download straight from the release asset).
 
 ### `GET /update/check`
-Compares the running `VERSION` with the latest GitHub release (cached 60 s):
+Compares the running `VERSION` with the latest GitHub release (cached 60 s; add
+`?force=1` to bypass the cache — the manual "Check for updates" button does):
 ```json
 { "ok": true, "current": "0.2.0", "latest": "0.3.0", "update_available": true,
   "release_name": "HeyVoices 0.3.0", "release_url": "https://github.com/…/releases/tag/v0.3.0",

@@ -150,9 +150,9 @@ def _version_tuple(v: str) -> tuple[int, ...]:
     return tuple(nums)
 
 
-def _latest_release() -> dict:
+def _latest_release(force: bool = False) -> dict:
     """Fetch (and briefly cache) the latest GitHub release for this app."""
-    if _update_cache["data"] is not None and time.time() - _update_cache["ts"] < 60:
+    if not force and _update_cache["data"] is not None and time.time() - _update_cache["ts"] < 60:
         return _update_cache["data"]
     req = urllib.request.Request(
         f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
@@ -166,10 +166,10 @@ def _latest_release() -> dict:
 
 
 @router.get("/update/check")
-def update_check() -> dict:
-    """Compare the running version against the latest GitHub release."""
+def update_check(force: bool = False) -> dict:
+    """Compare the running version against the latest GitHub release (`?force=1` skips the cache)."""
     try:
-        data = _latest_release()
+        data = _latest_release(force)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:  # repo exists but has no releases yet
             return {"ok": True, "current": VERSION, "latest": None, "no_releases": True,

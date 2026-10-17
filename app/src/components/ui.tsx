@@ -121,11 +121,13 @@ export function Toasts() {
       {toasts.map((t) => (
         <div
           key={t.id}
+          onClick={t.onClick ? () => { dismiss(t.id); t.onClick!() } : undefined}
           className={clsx(
             'animate-in pointer-events-auto flex max-w-[380px] items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-[12.5px] shadow-xl backdrop-blur',
             t.kind === 'success' && 'border-ok/30 bg-[#0a201b]/90 text-fg',
             t.kind === 'error' && 'border-danger/30 bg-[#251119]/90 text-fg',
             t.kind === 'info' && 'border-line-strong bg-ink-800/90 text-fg',
+            t.onClick && 'cursor-pointer transition-colors hover:border-accent/50',
           )}
         >
           {t.kind === 'success' && <CheckCircle2 size={14} className="mt-px shrink-0 text-ok" />}
@@ -135,7 +137,7 @@ export function Toasts() {
           <button
             className="-mr-1.5 -mt-1 rounded-md p-0.5 text-fg-dim transition-colors hover:!text-fg"
             title="Dismiss"
-            onClick={() => dismiss(t.id)}
+            onClick={(e) => { e.stopPropagation(); dismiss(t.id) }}
           >
             <X size={12} />
           </button>

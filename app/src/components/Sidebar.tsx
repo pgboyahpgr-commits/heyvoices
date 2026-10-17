@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import {
-  ArrowDown, ArrowUp, BookOpen, Box, Braces, Gauge, Layers, Loader2, Search,
+  ArrowDown, ArrowUp, BookOpen, Box, Braces, Download, Gauge, Layers, Loader2, Search,
   Settings2, Sparkles, Users, X, Zap,
 } from 'lucide-react'
 import { api } from '../lib/api'
@@ -317,6 +317,15 @@ export default function Sidebar() {
       </div>
 
       <div className="px-4 pb-4">
+        {update?.ok && update.update_available && update.latest && (
+          <button
+            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-accent/40 bg-accent/15 px-2 py-1.5 text-[10.5px] font-medium text-accent-soft transition-colors hover:bg-accent/25"
+            title={`HeyVoices ${update.latest} is available — open Settings to update`}
+            onClick={() => setPage('settings')}
+          >
+            <Download size={11} /> Update to v{update.latest}
+          </button>
+        )}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] text-fg-dim">v{info?.version ?? '0.3.0'} · fully local</span>
           <button

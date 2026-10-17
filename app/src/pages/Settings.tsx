@@ -462,11 +462,16 @@ export default function Settings() {
           </div>
         )}
 
-        <div className="mt-4 border-t border-line pt-3.5">
+        <div className="mt-4 space-y-3 border-t border-line pt-3.5">
           <Toggle
             label="Check for updates when HeyVoices starts"
             checked={settings.check_updates !== false}
             onChange={(v) => patch({ check_updates: v })}
+          />
+          <Toggle
+            label="Download updates automatically in the background"
+            checked={settings.auto_download_updates === true}
+            onChange={(v) => patch({ auto_download_updates: v })}
           />
         </div>
       </section>

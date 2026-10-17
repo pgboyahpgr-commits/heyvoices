@@ -10,6 +10,7 @@ export interface Toast {
   id: string
   kind: 'success' | 'error' | 'info'
   message: string
+  onClick?: () => void
 }
 
 export interface UpdatePhaseState {
@@ -79,7 +80,7 @@ interface State {
   assistNote: string
 
   setPage: (p: Page) => void
-  toast: (kind: Toast['kind'], message: string) => void
+  toast: (kind: Toast['kind'], message: string, opts?: { onClick?: () => void }) => void
   dismissToast: (id: string) => void
   setDraft: (patch: Partial<StudioDraft>) => void
   selectVoice: (id: string | null) => void
@@ -112,6 +113,17 @@ let sse: EventSource | null = null
 let sseRetry: number | null = null
 // one "update available" toast per session & version — auto checks stay quiet
 let notifiedUpdate: string | null = null
+
+// Strictly-increasing helper for dotted versions (used by the post-update welcome).
+function verGt(a: string, b: string): boolean {
+  const pa = a.split('.').map((n) => parseInt(n, 10) || 0)
+  const pb = b.split('.').map((n) => parseInt(n, 10) || 0)
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0)
+    if (d) return d > 0
+  }
+  return false
+}
 
 type SetPatch = (p: Partial<State> | ((s: State) => Partial<State>)) => void
 
@@ -220,10 +232,10 @@ export const useApp = create<State>((set, get) => ({
   },
 
   setPage: (page) => set({ page }),
-  toast: (kind, message) => {
+  toast: (kind, message, opts) => {
     const id = Math.random().toString(36).slice(2, 9)
-    set((s) => ({ toasts: [...s.toasts, { id, kind, message }] }))
-    setTimeout(() => get().dismissToast(id), kind === 'error' ? 7000 : 4200)
+    set((s) => ({ toasts: [...s.toasts, { id, kind, message, onClick: opts?.onClick }] }))
+    setTimeout(() => get().dismissToast(id), kind === 'error' ? 7000 : opts?.onClick ? 7500 : 4200)
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setDraft: (patch) => set((s) => ({ draft: { ...s.draft, ...patch } })),
@@ -243,6 +255,17 @@ export const useApp = create<State>((set, get) => ({
         if (!ok) throw new Error('down')
         set({ ready: true, backendDown: false, connected: true })
         await get().refreshAll()
+        // welcome the user after an in-app update (compare against the last seen version)
+        try {
+          const v = get().info?.version
+          const seen = localStorage.getItem('hv_seen_version')
+          if (v) {
+            if (seen && seen !== v && verGt(v, seen)) {
+              get().toast('success', `Updated to v${v} — you're on the new build`)
+            }
+            localStorage.setItem('hv_seen_version', v)
+          }
+        } catch { /* private mode etc. — never block boot */ }
         connectSSE(set, get)
         if (infoTimer === null) {
           infoTimer = window.setInterval(() => { get().refreshInfo().catch(() => {}) }, 5000)
@@ -516,7 +539,7 @@ export const useApp = create<State>((set, get) => ({
     const manual = !!opts?.manual
     set((s) => ({ updatePhase: { ...s.updatePhase, checking: true } }))
     try {
-      const update = await api.updateCheck()
+      const update = await api.updateCheck(manual)
       set({ update, updatePhase: { ...get().updatePhase, checking: false } })
       if (!update.ok) {
         if (manual) get().toast('error', update.error || 'Update check failed')
@@ -525,7 +548,15 @@ export const useApp = create<State>((set, get) => ({
       if (update.update_available && update.latest) {
         if (notifiedUpdate !== update.latest) {
           notifiedUpdate = update.latest
-          get().toast('info', `HeyVoices ${update.latest} is available — Settings → App updates`)
+          get().toast('info', `HeyVoices ${update.latest} is available — click to open App updates`, {
+            onClick: () => get().setPage('settings'),
+          })
+        }
+        // optional background download so "Install & restart" is one click later
+        const st = get()
+        if (update.asset?.url && st.info?.settings.auto_download_updates
+            && st.updatePhase.status !== 'downloading' && st.updatePhase.status !== 'ready') {
+          get().downloadUpdate().catch(() => {})
         }
       } else if (manual) {
         get().toast('success', update.latest

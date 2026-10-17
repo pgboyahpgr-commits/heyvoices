@@ -83,6 +83,7 @@ export interface Settings {
   transcribe_size: string
   hf_token: string
   check_updates: boolean
+  auto_download_updates: boolean
   prompt_assist: boolean
   pronunciations: { from: string; to: string }[]
 }
