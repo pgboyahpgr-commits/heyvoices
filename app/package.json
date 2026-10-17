@@ -5,6 +5,11 @@
   "productName": "HeyVoices",
   "description": "HeyVoices — fully-local AI voice studio (clone, design and generate voices on your own GPU). Built by GeethuDino.",
   "author": "GeethuDino",
+  "homepage": "https://pgboyahpgr-commits.github.io/heyvoices/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pgboyahpgr-commits/heyvoices.git"
+  },
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n ui,app -c cyan,magenta \"vite\" \"wait-on tcp:127.0.0.1:5173 && electron .\"",
