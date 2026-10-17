@@ -139,6 +139,23 @@ def models_catalog() -> dict:
 _downloads: dict[str, threading.Thread] = {}
 
 
+def _hf_token() -> str | None:
+    """Saved HF token (Settings) or a CLI login cache — needed for gated repos."""
+    token = (load_settings().get("hf_token") or "").strip()
+    if token:
+        return token
+    for p in (Path.home() / ".cache" / "huggingface" / "token",
+              Path.home() / ".huggingface" / "token"):
+        try:
+            if p.exists():
+                cached = p.read_text(encoding="utf-8").strip()
+                if cached:
+                    return cached
+        except OSError:
+            pass
+    return None
+
+
 def _start_model_download(model_id: str, meta: dict) -> bool:
     """Spawn a resumable HF snapshot download (also used for repairs)."""
     if model_id in _downloads and _downloads[model_id].is_alive():
@@ -148,12 +165,31 @@ def _start_model_download(model_id: str, meta: dict) -> bool:
         from huggingface_hub import snapshot_download
 
         try:
+            from huggingface_hub.errors import GatedRepoError
+        except Exception:  # pragma: no cover - very old huggingface_hub
+            GatedRepoError = None  # type: ignore[assignment,misc]
+
+        try:
             events.emit("model", model_state(model_id))
-            snapshot_download(meta["repo"])
+            token = _hf_token()
+            repos = [{"repo": meta["repo"], "revision": meta.get("revision")}]
+            repos += list(meta.get("extra_repos") or [])
+            for entry in repos:
+                snapshot_download(entry["repo"], revision=entry.get("revision"), token=token)
             _write_model_manifest(model_id)
+            try:
+                seed_indic_presets()
+            except Exception:  # preset seeding is best-effort
+                pass
             events.emit("model", model_state(model_id))
         except Exception as exc:  # noqa: BLE001
-            events.emit("model_error", {"id": model_id, "error": str(exc)})
+            text = str(exc)
+            gated = bool(GatedRepoError and isinstance(exc, GatedRepoError)) or any(
+                s in text.lower() for s in ("gated", "restricted", "401", "403", "authenticated"))
+            payload: dict = {"id": model_id, "error": text[:600], "gated": gated}
+            if gated:
+                payload["url"] = f"https://huggingface.co/{meta['repo']}"
+            events.emit("model_error", payload)
 
     t = threading.Thread(target=_run, name=f"dl-{model_id}", daemon=True)
     _downloads[model_id] = t
@@ -810,3 +846,45 @@ def seed_presets() -> None:
                            kind="preset", engine="qwen3-tts", language=s["language"],
                            color=_color_for(s["name"]),
                            meta={"speaker": s["id"], "preset": True})
+
+
+def seed_indic_presets() -> None:
+    """Preset voices for IndicF5 (bundled AI4Bharat prompt clips, MIT).
+
+    Incremental + idempotent: safe to run on every startup and after downloads.
+    """
+    try:
+        from .engines.indicf5 import PRESETS, preset_clip_path
+    except Exception:
+        return
+    existing = {v.get("meta", {}).get("preset_key") for v in store.list_voices()
+                if v.get("kind") == "preset"}
+    for p in PRESETS:
+        if p["key"] in existing:
+            continue
+        src = preset_clip_path(p["file"])
+        if not src:
+            continue
+        name = p["name"]
+        if store.voice_exists_by_name(name):
+            continue
+        voice = store.create_voice(
+            name=name,
+            description=f"IndicF5 preset · {p['language_label']} — speaks all 11 Indian languages",
+            kind="preset", engine="indicf5", language=p["language"],
+            color=_color_for(name),
+            meta={"preset": True, "indic": True, "preset_key": p["key"]})
+        vid = voice["id"]
+        sid = store.new_id()
+        dst_dir = VOICES_DIR / vid
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        dst = dst_dir / f"{sid}.wav"
+        shutil.copy2(src, dst)
+        samples = [{
+            "id": sid, "file": dst.name,
+            "url": f"/files/voices/{vid}/{dst.name}",
+            "transcript": p["transcript"],
+            "duration": duration_of(dst),
+        }]
+        updated = store.update_voice(vid, {"samples": samples})
+        events.emit("voices", {"action": "created", "voice": updated})

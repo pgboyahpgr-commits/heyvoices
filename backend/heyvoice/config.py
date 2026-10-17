@@ -43,6 +43,7 @@ DEFAULT_SETTINGS: dict = {
     "auto_unload": True,
     "vram_budget_gb": 6.5,
     "transcribe_size": "small",      # whisper model used for reference transcripts
+    "hf_token": "",                  # optional Hugging Face token (gated models like IndicF5)
     "pronunciations": [],            # [{"from": "HeyVoices", "to": "Hey Voice"}, ...]
 }
 

@@ -38,6 +38,7 @@ export interface ModelInfo {
   progress: number
   on_disk_gb?: number
   recommended?: boolean
+  gated?: boolean
 }
 
 export interface Generation {
@@ -80,6 +81,7 @@ export interface Settings {
   auto_unload: boolean
   vram_budget_gb: number
   transcribe_size: string
+  hf_token: string
   pronunciations: { from: string; to: string }[]
 }
 
@@ -174,6 +176,16 @@ export const LANGUAGES: { id: string; label: string }[] = [
   { id: 'auto', label: 'Auto detect' },
   { id: 'en', label: 'English' },
   { id: 'hi', label: 'Hindi' },
+  { id: 'te', label: 'Telugu' },
+  { id: 'ta', label: 'Tamil' },
+  { id: 'kn', label: 'Kannada' },
+  { id: 'ml', label: 'Malayalam' },
+  { id: 'mr', label: 'Marathi' },
+  { id: 'or', label: 'Odia' },
+  { id: 'pa', label: 'Punjabi' },
+  { id: 'gu', label: 'Gujarati' },
+  { id: 'bn', label: 'Bengali' },
+  { id: 'as', label: 'Assamese' },
   { id: 'zh', label: 'Chinese' },
   { id: 'ja', label: 'Japanese' },
   { id: 'ko', label: 'Korean' },

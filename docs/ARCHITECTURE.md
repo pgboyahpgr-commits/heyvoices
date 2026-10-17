@@ -26,6 +26,8 @@ heyvoice/
     qwen3tts.py  Base (cloning), CustomVoice (presets + instruct), VoiceDesign
     chatterbox.py Multilingual v3 + Turbo; API introspected at load time
     kokoro.py    KPipeline presets, CPU-only
+    indicf5.py   IndicF5 (11 Indian languages, zero-shot cloning) + 5 bundled presets
+    vendor_f5/   vendored MIT F5-TTS inference code used by indicf5.py (no remote code)
     whisper_asr.py  faster-whisper: ref-text transcription
   api.py         REST + SSE routes
   main.py        FastAPI app, static mounts (/files/outputs, /files/voices), startup
@@ -34,8 +36,11 @@ heyvoice/
 ### The generation pipeline (`jobs.h_generate`)
 
 1. Resolve `(engine, model)` for the requested voice — explicit `model` param wins, otherwise
-   the voice's engine hint, otherwise Auto: cloned → Qwen 0.6B Base → 1.7B Base → Chatterbox;
-   preset speakers → CustomVoice models; Kokoro presets → Kokoro.
+   the voice's engine hint, otherwise Auto: **Indic languages + a clone → IndicF5** (Hindi can
+   fall back to Chatterbox; preset voices stay on their own engine); cloned → Qwen 0.6B Base →
+   1.7B Base → Chatterbox; preset speakers → CustomVoice models; Kokoro presets → Kokoro.
+   When the language is `auto`, the script of the text is detected (Devanagari, Gurmukhi, Tamil,
+   Telugu, Kannada, Malayalam, Odia, Gujarati, Bengali), so pasting Telugu just works.
 2. `ensure_model()` — unload other engines (auto-unload setting) and load the target with
    `dtype=bfloat16` (CUDA) and `attn_implementation="sdpa"`.
 3. Chunk text (sentence-aware, honors `[[pause:600ms]]`) at `chunk_max_chars` (default 280).
@@ -76,7 +81,8 @@ normalized at ingest). Outputs live in `data/outputs/`. Both are served read-onl
 - bf16 weights + SDPA attention; **no flash-attn** (no official Windows wheels — do not enable).
 - Kokoro runs on **CPU** deliberately, freeing VRAM entirely.
 - Budgets: Qwen 0.6B ≈ 2.4 GB peak (measured on the RTX 4060), Chatterbox ≈ 3 GB,
-  Qwen 1.7B/VoiceDesign ≈ 6.5 GB (tight, works when nothing else is loaded).
+  IndicF5 ≈ 2.2 GB peak (1.4 GB resident), Qwen 1.7B/VoiceDesign ≈ 6.5 GB (tight, works when
+  nothing else is loaded).
 
 ## Frontend structure
 

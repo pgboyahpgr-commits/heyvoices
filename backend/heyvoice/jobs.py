@@ -11,7 +11,7 @@ from . import events, store
 from .audio import (apply_effects, chunk_text, compute_peaks, duration_of, export_audio,
                     normalize_loudness, stitch, trim_silence)
 from .config import OUTPUTS_DIR, UPLOADS_DIR, VOICES_DIR, load_settings
-from .engines import CATALOG, ENGINES, get_engine, model_state
+from .engines import CATALOG, ENGINES, INDIC_LANGS, get_engine, model_state
 from .engines.base import GenRequest
 
 
@@ -174,8 +174,47 @@ def _is_ready(model_id: str) -> bool:
     return model_state(model_id).get("state") in ("ready", "loaded")
 
 
+# Indic script block -> language, used when the request language is "auto".
+_SCRIPT_RANGES: list[tuple[str, int, int]] = [
+    ("hi", 0x0900, 0x097F),   # Devanagari (Hindi / Marathi)
+    ("bn", 0x0980, 0x09FF),   # Bengali / Assamese
+    ("pa", 0x0A00, 0x0A7F),   # Gurmukhi
+    ("gu", 0x0A80, 0x0AFF),   # Gujarati
+    ("or", 0x0B00, 0x0B7F),   # Odia
+    ("ta", 0x0B80, 0x0BFF),   # Tamil
+    ("te", 0x0C00, 0x0C7F),   # Telugu
+    ("kn", 0x0C80, 0x0CFF),   # Kannada
+    ("ml", 0x0D00, 0x0D7F),   # Malayalam
+]
+
+
+def detect_script_language(text: str) -> str:
+    """Best-effort language code from Indic script ranges ('' = none found)."""
+    counts: dict[str, int] = {}
+    for ch in text:
+        cp = ord(ch)
+        for lang, lo, hi in _SCRIPT_RANGES:
+            if lo <= cp <= hi:
+                counts[lang] = counts.get(lang, 0) + 1
+                break
+    return max(counts, key=counts.get) if counts else ""
+
+
+def effective_language(payload_lang: str | None, voice: dict | None, settings: dict,
+                       text: str = "") -> str:
+    """Resolve 'auto' language: payload -> voice -> script detection -> default."""
+    language = (payload_lang or "").strip()
+    if not language or language == "auto":
+        language = ((voice or {}).get("language") or "").strip()
+    if not language or language == "auto":
+        language = detect_script_language(text)
+    if not language:
+        language = settings.get("default_language") or "en"
+    return language
+
+
 def resolve_engine(voice: dict | None, req_engine: str | None, req_model: str | None,
-                   design: bool = False) -> tuple[str, str]:
+                   design: bool = False, language: str = "") -> tuple[str, str]:
     """Pick (engine_id, model_key) for a generation request."""
     if req_model:
         meta = CATALOG.get(req_model)
@@ -197,14 +236,31 @@ def resolve_engine(voice: dict | None, req_engine: str | None, req_model: str | 
     speaker = meta.get("speaker", "")
     engine_hint = req_engine or voice.get("engine") or ""
     is_clone = voice.get("kind") in ("cloned", "designed") and bool(voice.get("samples"))
+    indic = language in INDIC_LANGS
 
     plans: list[tuple[str, list[str]]] = []
     if engine_hint == "kokoro" or voice.get("kind") == "preset" and meta.get("kokoro"):
+        if indic and language != "hi":
+            raise RuntimeError(f"Kokoro preset voices don't speak {language.upper()} — clone a voice "
+                               f"or pick an IndicF5 preset instead.")
         plans = [("kokoro", ["kokoro-82m"])]
+    elif engine_hint == "indicf5":
+        plans = [("indicf5", ["indicf5"])]
     elif speaker and engine_hint != "chatterbox":
+        if indic:
+            raise RuntimeError(f"'{voice.get('name', 'This preset')}' is an English/Chinese preset voice — "
+                               f"clone a voice (or pick an IndicF5 preset) to speak {language.upper()}.")
         plans = [("qwen3-tts", ["qwen3-tts-0.6b-customvoice", "qwen3-tts-1.7b-customvoice"])]
     elif engine_hint == "chatterbox":
+        if indic and language != "hi":
+            raise RuntimeError(f"Chatterbox doesn't cover {language.upper()} — install IndicF5 "
+                               f"(11 Indian languages) or pick an IndicF5 preset.")
         plans = [("chatterbox", ["chatterbox-multilingual", "chatterbox-turbo"])]
+    elif indic and is_clone:
+        # an Indic language + a cloned/designed voice: IndicF5 is the right engine
+        plans = [("indicf5", ["indicf5"])]
+        if language == "hi":
+            plans.append(("chatterbox", ["chatterbox-multilingual"]))
     elif is_clone or engine_hint == "qwen3-tts":
         plans = [
             ("qwen3-tts", ["qwen3-tts-0.6b-base", "qwen3-tts-1.7b-base"]),
@@ -220,8 +276,12 @@ def resolve_engine(voice: dict | None, req_engine: str | None, req_model: str | 
 
     want = plans[0][1][0] if plans else "qwen3-tts-0.6b-base"
     nice = CATALOG.get(want, {}).get("name", want)
+    extra = ""
+    if CATALOG.get(want, {}).get("gated"):
+        extra = (" It is gated on Hugging Face — click 'Agree and access repository' there once "
+                 "(free account), then download it here.")
     raise RuntimeError(f"No usable model is installed for this voice. Open the Models page "
-                       f"and download a recommended model (try '{nice}').")
+                       f"and download a recommended model (try '{nice}').{extra}")
 
 
 def ensure_model(engine_id: str, model_key: str) -> None:
@@ -298,21 +358,22 @@ def h_generate(job: Job, p: dict) -> None:
     settings = load_settings()
     job.check_canceled()
     voice = store.get_voice(p["voice_id"]) if p.get("voice_id") else None
-    engine_id, model_key = resolve_engine(voice, p.get("engine"), p.get("model"),
-                                          design=bool(p.get("design")))
-    ensure_model(engine_id, model_key)
-    engine = get_engine(engine_id)
-    job.check_canceled()
 
     text = (p.get("text") or "").strip()
     if not text:
         raise RuntimeError("Text is empty")
     text = _apply_pronunciations(text, settings)
 
+    language = effective_language(p.get("language"), voice, settings, text)
+    engine_id, model_key = resolve_engine(voice, p.get("engine"), p.get("model"),
+                                          design=bool(p.get("design")), language=language)
+    ensure_model(engine_id, model_key)
+    engine = get_engine(engine_id)
+    job.check_canceled()
+
     # voice reference wiring
     speaker, ref_audio, ref_text, voice_key = _voice_ref(voice)
 
-    language = p.get("language") or (voice or {}).get("language") or settings["default_language"]
     chunks = chunk_text(text, int(settings["chunk_max_chars"]))
     if not chunks:
         raise RuntimeError("Nothing to synthesize after chunking")
@@ -405,12 +466,13 @@ def h_story(job: Job, p: dict) -> None:
         voice = store.get_voice(line["voice_id"]) if line.get("voice_id") else None
         if not voice:
             raise RuntimeError(f"Line {li + 1}: no voice selected (or the voice was deleted)")
-        engine_id, model_key = resolve_engine(voice, line.get("engine"), line.get("model"))
+        language = effective_language(line.get("language"), voice, settings, text)
+        engine_id, model_key = resolve_engine(voice, line.get("engine"), line.get("model"),
+                                              language=language)
         ensure_model(engine_id, model_key)
         engine = get_engine(engine_id)
         speaker, ref_audio, ref_text, voice_key = _voice_ref(voice)
 
-        language = line.get("language") or (voice or {}).get("language") or settings["default_language"]
         chunks = chunk_text(text, int(settings["chunk_max_chars"]))
         line_seconds = 0.0
         line_parts = 0

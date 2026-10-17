@@ -57,7 +57,11 @@
           "!.venv/**",
           "!.venv",
           "!**/__pycache__/**",
-          "!**/*.log"
+          "!**/*.log",
+          "!models",
+          "!models/**",
+          "!data",
+          "!data/**"
         ]
       }
     ],

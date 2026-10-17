@@ -4,10 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HeyVoices — Local Voice Studio</title>
-  <meta name="description" content="HeyVoices is a fully-local AI voice studio for your own GPU. Clone any voice from a few seconds of audio or video, generate speech in 25+ languages, design new voices, and batch-produce voice lines — with zero cloud, zero accounts, zero uploads." />
+  <meta name="description" content="HeyVoices is a fully-local AI voice studio for your own GPU. Clone any voice from a few seconds of audio or video, generate speech in 35+ languages — including 11 Indian languages — design new voices, and batch-produce voice lines — with zero cloud, zero accounts, zero uploads." />
   <meta name="theme-color" content="#0b0d0f" />
   <meta property="og:title" content="HeyVoices — Local Voice Studio" />
-  <meta property="og:description" content="Clone any voice from a few seconds of audio or video. Generate speech in 25+ languages. 100% local — no cloud, no accounts, no uploads." />
+  <meta property="og:description" content="Clone any voice from a few seconds of audio or video. Generate speech in 35+ languages, including 11 Indian languages. 100% local — no cloud, no accounts, no uploads." />
   <meta property="og:type" content="website" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="apple-touch-icon" href="icon.png" />
@@ -49,7 +49,7 @@
           <h1>Your own voice studio.<br /><span class="grad">Fully local.</span></h1>
           <p class="hero-sub">
             HeyVoices turns your PC into an ElevenLabs-style voice studio: clone any voice from a few
-            seconds of audio or video, generate speech in 25+ languages, and batch-produce voice lines
+            seconds of audio or video, generate speech in 35+ languages — including Telugu, Tamil and Hindi — and batch-produce voice lines
             for videos, games, audiobooks and apps.
           </p>
           <div class="hero-ctas">
@@ -192,6 +192,56 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
           Rendered with the bundled Kokoro engine (Apache-2.0) — presets need no setup and render in seconds.
         </p>
+
+        <div class="sec-head reveal" style="margin-top:64px">
+          <div class="sec-kicker">Indian languages</div>
+          <h2>Telugu, Tamil &amp; Hindi — cloned, local</h2>
+          <p class="sec-sub">
+            Rendered with IndicF5 (AI4Bharat, MIT) on the same laptop GPU. Clone a speaker once and the
+            same voice speaks all 11 Indian languages — only the text changes.
+          </p>
+        </div>
+        <div class="voices-grid">
+          <article class="voice-card reveal" data-src="audio/telugu.mp3">
+            <button class="voice-play" aria-label="Play Kavya Telugu sample">
+              <svg class="ic-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="7 4 20 12 7 20"/></svg>
+              <svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            </button>
+            <div class="voice-info">
+              <div class="voice-name">Kavya · Telugu</div>
+              <div class="voice-meta">Preset voice · 3.7s — “నమస్కారం! మీ స్వంత గొంతుతో తెలుగులో సహజమైన మాటలు ఇప్పుడు చాలా సులభం.”</div>
+            </div>
+            <div class="voice-track"><div class="bar"><i></i></div><div class="t">0:00</div></div>
+          </article>
+
+          <article class="voice-card reveal" data-src="audio/tamil.mp3">
+            <button class="voice-play" aria-label="Play Kavya Tamil sample">
+              <svg class="ic-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="7 4 20 12 7 20"/></svg>
+              <svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            </button>
+            <div class="voice-info">
+              <div class="voice-name">Kavya · Tamil</div>
+              <div class="voice-meta">Preset voice · 4.6s — “வணக்கம்! உங்கள் சொந்தக் குரலில் தமிழில் இயல்பான பேச்சை இப்போது எளிதாக உருவாக்கலாம்.”</div>
+            </div>
+            <div class="voice-track"><div class="bar"><i></i></div><div class="t">0:00</div></div>
+          </article>
+
+          <article class="voice-card reveal" data-src="audio/hindi.mp3">
+            <button class="voice-play" aria-label="Play Meera Hindi sample">
+              <svg class="ic-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="7 4 20 12 7 20"/></svg>
+              <svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            </button>
+            <div class="voice-info">
+              <div class="voice-name">Meera · Hindi</div>
+              <div class="voice-meta">Preset voice · 5.0s — “नमस्ते! अपनी ही आवाज़ में हिंदी में प्राकृतिक बोली अब बहुत आसान है।”</div>
+            </div>
+            <div class="voice-track"><div class="bar"><i></i></div><div class="t">0:00</div></div>
+          </article>
+        </div>
+        <p class="voices-note reveal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          IndicF5 is gated on Hugging Face: click “Agree and access repository” once on its model page and paste a free read token in Settings — the app walks you through it.
+        </p>
       </div>
     </section>
 
@@ -221,8 +271,8 @@
           </div>
           <div class="feature reveal">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
-            <h3>25+ languages</h3>
-            <p>English, Chinese, Japanese, Korean, French, German, Spanish and more — plus auto language detection.</p>
+            <h3>35+ languages</h3>
+            <p>English, Chinese, Japanese and more — plus 11 Indian languages (Telugu, Tamil, Odia, Kannada, Malayalam, Marathi, Punjabi, Gujarati, Bengali, Assamese, Hindi) with zero-shot cloning, powered by IndicF5.</p>
           </div>
           <div class="feature reveal">
             <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
@@ -366,7 +416,7 @@
       </div>
       <div class="foot-bottom">
         <span class="built">Built by GeethuDino</span>
-        <span>Engines: Qwen3-TTS · Chatterbox · Kokoro — Apache-2.0 / MIT</span>
+        <span>Engines: Qwen3-TTS · Chatterbox · IndicF5 · Kokoro — Apache-2.0 / MIT</span>
         <span>100% local · no cloud · no accounts</span>
       </div>
     </div>

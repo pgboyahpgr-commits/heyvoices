@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from . import events
-from .api import router, seed_presets
+from .api import router, seed_indic_presets, seed_presets
 from .config import HOST, OUTPUTS_DIR, PORT, UPLOADS_DIR, VERSION, VOICES_DIR
 from .jobs import start_worker
 
@@ -33,6 +33,7 @@ async def _startup() -> None:
     start_worker()
     try:
         seed_presets()
+        seed_indic_presets()
     except Exception as exc:  # noqa: BLE001
         print("preset seeding failed:", exc, flush=True)
     print(f"HeyVoices backend v{VERSION} ready on http://{HOST}:{PORT}", flush=True)

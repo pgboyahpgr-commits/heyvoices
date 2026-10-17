@@ -384,7 +384,7 @@ function StoryLineCard({
       <div className="mb-2 flex items-center gap-2">
         <span className="w-6 shrink-0 text-center text-[11px] font-semibold tabular-nums text-fg-dim">{index + 1}</span>
         <VoiceSelect voices={voices} value={line.voiceId || null} onSelect={(v) => patch(line.id, { voiceId: v.id })} compact />
-        {voice?.kind === 'preset' && <span className="badge !text-[9px]">{voice.engine === 'kokoro' ? 'Kokoro' : 'Preset'}</span>}
+        {voice?.kind === 'preset' && <span className="badge !text-[9px]">{voice.engine === 'kokoro' ? 'Kokoro' : voice.engine === 'indicf5' ? 'Indic' : 'Preset'}</span>}
         <div className="flex-1" />
         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/line:opacity-100 focus-within:opacity-100">
           <button

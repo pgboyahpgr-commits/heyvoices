@@ -426,10 +426,17 @@ function handleEvent(
       }
       break
     }
-    case 'model_error':
-      get().toast('error', `Model download failed: ${data.error}`)
+    case 'model_error': {
+      const m = get().models.find((x) => x.id === data?.id)
+      const name = m?.name || 'Model'
+      if (data?.gated) {
+        get().toast('error', `${name} is gated on Hugging Face — open its model page, click “Agree and access repository” (free account), add a read token in Settings → Hugging Face, then download again.`)
+      } else {
+        get().toast('error', `${name} download failed: ${data?.error}`)
+      }
       get().refreshModels()
       break
+    }
     case 'voices':
       get().refreshVoices().catch(() => {})
       break

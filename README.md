@@ -20,7 +20,7 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
 ┌──────────────────────────▼─────────────────────────────────┐
 │  Python backend (FastAPI)                                  │
 │    job queue · voice store (SQLite) · model manager        │
-│    Qwen3-TTS · Chatterbox · Kokoro · Whisper               │
+│    Qwen3-TTS · Chatterbox · IndicF5 · Kokoro · Whisper     │
 └──────────────────────────┬─────────────────────────────────┘
                            │
                  RTX 4060 (8 GB) — your GPU
@@ -32,10 +32,12 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
 
 - **Voice cloning** — drop 5–30 s of clean speech **as audio or video** (mp4/mov/mkv/webm — the
   audio track is extracted with FFmpeg, silence-trimmed and normalized); Whisper auto-transcribes
-  it and Qwen3-TTS or Chatterbox clones the timbre. Add up to three clips of the same speaker and
-  they are blended into one clone prompt for a sharper match. Reusable forever, no per-use cost.
-  Every reference clip is **analyzed on arrival** (SNR, clipping, speech ratio, duration) with
-  plain-language verdicts, and any transcript can be upgraded to **large-v3-turbo** in one click.
+  it and Qwen3-TTS or Chatterbox clones the timbre (up to three clips of the same speaker blend
+  into one sharper clone prompt). Clone an Indian-language speaker with **IndicF5** and the same
+  voice speaks all 11 — Telugu, Tamil, Odia, Kannada, Malayalam, Marathi, Punjabi, Gujarati,
+  Bengali, Assamese, Hindi. Reusable forever, no per-use cost. Every reference clip is **analyzed
+  on arrival** (SNR, clipping, speech ratio, duration) with plain-language verdicts, and any
+  transcript can be upgraded to **large-v3-turbo** in one click.
 - **Voice design** — describe a voice in words ("calm middle-aged male, slightly husky") and
   generate it, then save the result as a clonable voice.
 - **Story mode** — write multi-speaker scripts: every line gets its own voice, pause length and
@@ -47,12 +49,14 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   player: click through the takes, keep your favorite, discard the rest. (Kokoro is deterministic,
   so its takes vary pacing slightly for a meaningful comparison.)
 - **Engine tuning** — per-engine advanced knobs (Chatterbox CFG/emotion, Qwen temperature/top-p/
-  top-k/rep-penalty, Kokoro speed) with the engine defaults shown as `auto` and one-click reset.
+  top-k/rep-penalty, Kokoro speed, IndicF5 speed/CFG strength) with the engine defaults shown as
+  `auto` and one-click reset.
 - **One-click previews** — hear any voice (cloned or preset) with a single click; takes auto-play
   when they finish. During long renders a **"Play so far"** button streams the partial audio
   rendered up to that point — no waiting for the full line.
-- **25+ languages** — Qwen3-TTS (EN, ZH, JA, KO, DE, FR, RU, PT, ES, IT), Chatterbox Multilingual
-  v3 (25 languages), Kokoro presets.
+- **35+ languages** — Qwen3-TTS (EN, ZH, JA, KO, DE, FR, RU, PT, ES, IT), Chatterbox Multilingual
+  v3 (25 languages), Kokoro presets, plus 11 Indian languages with IndicF5 (Telugu, Tamil, Odia,
+  Kannada, Malayalam, Marathi, Punjabi, Gujarati, Bengali, Assamese, Hindi).
 - **Delivery control** — natural-language instructions (`speak slowly, whisper`) for Qwen preset
   voices; emotion-exaggeration slider and expressive tags (`[laugh]`, `[whisper]`) for Chatterbox.
 - **Script mode** — `[[pause:600ms]]` markers, automatic sentence-aware chunking, crossfade
@@ -108,7 +112,9 @@ npm run dev
 
 First launch: open **Models** and download the recommended set
 (Qwen3-TTS 0.6B Base, Chatterbox, Kokoro ≈ 3 GB total). Then open **Voices → New voice**,
-drop in a short clip, and hit **Generate** in the Studio.
+drop in a short clip, and hit **Generate** in the Studio. For the 11 Indian languages add
+**IndicF5** too (~1.6 GB) — it is gated on Hugging Face: click “Agree and access repository”
+once on its model page (free account) and paste a read token in **Settings → Hugging Face**.
 
 ### Install it (no dev tools)
 
@@ -148,7 +154,7 @@ backend/
   heyvoice/            # Python package
     api.py             # FastAPI routes
     jobs.py            # GPU job queue + generation pipeline
-    engines/           # qwen3tts · chatterbox · kokoro · whisper_asr
+    engines/           # qwen3tts · chatterbox · indicf5 · kokoro · whisper_asr (+ vendor_f5)
     audio.py           # chunking, stitching, loudness, effects, export
     store.py           # SQLite voices + generations
   scripts/             # setup.ps1 (Windows) · setup.sh (Linux/macOS) · smoke_clone.py
@@ -175,6 +181,6 @@ data/                  # voices, outputs, SQLite db (gitignored)
 ## Licensing
 
 All bundled models are permissively licensed (Qwen3-TTS Apache-2.0, Chatterbox MIT,
-Kokoro Apache-2.0, Whisper MIT). No non-commercial weights are used, so your outputs — and this
-app — stay product-safe. HeyVoices itself is MIT-licensed (see [LICENSE](LICENSE)) — built by
-GeethuDino.
+Kokoro Apache-2.0, IndicF5 MIT, Whisper MIT). No non-commercial weights are used, so your outputs
+— and this app — stay product-safe. HeyVoices itself is MIT-licensed (see [LICENSE](LICENSE)) —
+built by GeethuDino.

@@ -34,6 +34,12 @@ interface TuneSpec {
   int?: boolean
 }
 
+// Indic languages served by the IndicF5 engine (scripts: Devanagari, Bengali,
+// Gurmukhi, Gujarati, Odia, Tamil, Telugu, Kannada, Malayalam)
+const INDIC_LANGS = new Set(['as', 'bn', 'gu', 'hi', 'kn', 'ml', 'mr', 'or', 'pa', 'ta', 'te'])
+const hasIndicScript = (t: string) =>
+  /[\u0900-\u097F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F]/.test(t)
+
 const ENGINE_TUNING: Record<string, TuneSpec[]> = {
   chatterbox: [
     { key: 'cfg_weight', label: 'CFG weight', min: 0, max: 1, step: 0.05, auto: 0.5 },
@@ -48,6 +54,10 @@ const ENGINE_TUNING: Record<string, TuneSpec[]> = {
   ],
   kokoro: [
     { key: 'speed', label: 'Speed', min: 0.5, max: 2, step: 0.05, auto: 1.0 },
+  ],
+  indicf5: [
+    { key: 'speed', label: 'Speed', min: 0.5, max: 2, step: 0.05, auto: 1.0 },
+    { key: 'cfg_weight', label: 'CFG strength', min: 0.5, max: 3.5, step: 0.1, auto: 2.0 },
   ],
 }
 
@@ -69,11 +79,6 @@ export default function Studio() {
   const words = draft.text.trim() ? draft.text.trim().split(/\s+/).length : 0
   const estSec = chars / 14
 
-  // which engine will render this request → decides the tuning panel
-  const tuneEngine = draft.model
-    ? (models.find((m) => m.id === draft.model)?.engine || voice?.engine || 'qwen3-tts')
-    : (voice?.engine || 'qwen3-tts')
-  const tuneSpecs = ENGINE_TUNING[tuneEngine] ?? []
   const isTurbo = draft.model === 'chatterbox-turbo'
   const patchTune = (key: TuneKey, v: number | null) =>
     setDraft({ [key]: v } as Partial<typeof draft>)
@@ -113,7 +118,16 @@ export default function Studio() {
   const engineOf = (id: string) => models.find((m) => m.id === id)?.name ?? id
 
   const isChatterbox = voice?.engine === 'chatterbox' || draft.model.startsWith('chatterbox')
-  const supportsInstruct = !voice || voice.engine === 'qwen3-tts'
+
+  // which engine will render this request → decides the tuning panel
+  const indicf5Ready = models.some((m) => m.id === 'indicf5' && (m.state === 'ready' || m.state === 'loaded'))
+  const langNow = draft.language && draft.language !== 'auto' ? draft.language : (voice?.language || '')
+  const indicActive = INDIC_LANGS.has(langNow) || ((langNow === 'auto' || !langNow) && hasIndicScript(draft.text))
+  const supportsInstruct = (!voice || voice.engine === 'qwen3-tts') && !indicActive
+  const tuneEngine = draft.model
+    ? (models.find((m) => m.id === draft.model)?.engine || voice?.engine || 'qwen3-tts')
+    : (voice?.engine || (indicf5Ready && indicActive ? 'indicf5' : 'qwen3-tts'))
+  const tuneSpecs = ENGINE_TUNING[tuneEngine] ?? []
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -607,7 +621,7 @@ function Group({ label, voices, selected, onPick }: {
             </div>
           </div>
           {v.engine && (
-            <span className="badge !text-[9.5px]">{v.engine === 'kokoro' ? 'Kokoro' : v.engine === 'chatterbox' ? 'CB' : 'Qwen'}</span>
+            <span className="badge !text-[9.5px]">{v.engine === 'kokoro' ? 'Kokoro' : v.engine === 'chatterbox' ? 'CB' : v.engine === 'indicf5' ? 'Indic' : 'Qwen'}</span>
           )}
           {selected?.id === v.id && <Check size={13} className="text-accent-soft" />}
         </button>

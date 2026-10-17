@@ -13,10 +13,16 @@ licensed** — safe for personal use *and* for shipping products built on their 
 | Chatterbox Multilingual v3 | Chatterbox | 0.5B | ~1.2 GB | ~3 GB | MIT | 25 | Broadest language coverage |
 | Chatterbox Turbo | Chatterbox | 350M | ~1 GB | ~2.5 GB | MIT | EN | Fast + expressive tags |
 | Kokoro 82M | Kokoro | 82M | ~0.4 GB | CPU | Apache-2.0 | 8 | Instant preset voices |
+| IndicF5 | IndicF5 | 0.3B | ~1.6 GB | ~2.2 GB | MIT | 11 | 11 Indian languages + zero-shot cloning (gated on HF) |
 | Whisper `small` (faster-whisper) | ASR | 244M | ~0.5 GB | ~1.5 GB | MIT | 99 | Ref-text transcription (default) |
 | Whisper `large-v3-turbo` | ASR | 809M | ~1.6 GB | ~2 GB | MIT | 99 | "Better transcript" upgrade — names, numbers, punctuation |
 
 **Recommended starter set (~3 GB):** Qwen3-TTS 0.6B Base + Chatterbox + Kokoro.
+
+**Indian languages (optional, ~1.6 GB):** **IndicF5** adds Telugu, Tamil, Odia, Kannada, Malayalam,
+Marathi, Punjabi, Gujarati, Bengali, Assamese and Hindi with zero-shot cloning. It is **gated on
+Hugging Face** — click “Agree and access repository” once on the model page (free account), paste a
+read token in **Settings → Hugging Face**, then download it from the Models page.
 
 Every downloaded model gets a **file manifest** written at download time. The Models page can
 **Verify** any model against it (first run records the baseline) and **Repair** — a resumable
@@ -49,12 +55,31 @@ fixed in place; no full re-download needed.
 - 82M params, runs on CPU in realtime — zero VRAM cost. Preset voices only (no cloning).
 - Great for drafts, long lists, and when the GPU is busy.
 
+### IndicF5 (AI4Bharat / IIT Madras, MIT)
+- **11 Indian languages** with zero-shot cloning: Telugu, Tamil, Odia, Kannada, Malayalam, Marathi,
+  Punjabi, Gujarati, Bengali, Assamese, Hindi.
+- One clone speaks **all 11** — the reference clip sets the timbre, the generated text sets the
+  language (cross-lingual prompting is a first-class mode of the model). Cloning needs the clip
+  **and its transcript**; transcript accuracy matters more here than for other engines, so use the
+  **Better transcript** upgrade if the auto one fumbles.
+- Five bundled preset voices ship with the app (Kavya · Tamil, Kiran · Kannada, Meera & Arjun ·
+  Marathi, Simran · Punjabi — the official AI4Bharat demo clips, MIT), so you can try the
+  languages with zero setup. Generation auto-routes to IndicF5 for Indic languages/text.
+- Inference runs on **vendored MIT code** (`engines/vendor_f5/` — no `trust_remote_code`, no remote
+  code execution); the checkpoint, vocab and vocos vocoder load from local snapshots, so generation
+  is fully offline once downloaded.
+- **Gated on Hugging Face:** free account + one-click terms accept on the model page, then a read
+  token in Settings → Hugging Face. The Models page walks you through it and explains the error if
+  the download is refused.
+- Tuning: Speed (0.5–2.0) and CFG strength (default 2.0).
+
 ## Hardware guidance (RTX 4060 Laptop, 8 GB)
 
 | Combination | Works? | Notes |
 |---|---|---|
 | Qwen 0.6B Base alone | ✅ | ~3.5 GB, comfortable; fastest good-quality cloning |
 | Chatterbox ML + Turbo swapping | ✅ | ~3 GB each, auto-unload handles it |
+| IndicF5 | ✅ | ~1.4 GB loaded — the lightest GPU engine; leaves plenty of headroom |
 | Qwen 1.7B variants | ✅ | ~6.5 GB — close browsers/games first |
 | Everything at once | ❌ | Single-model residency is enforced by design |
 
@@ -79,6 +104,7 @@ Run the script yourself after setup to compare on your hardware.
 | Kokoro 82M — preset voice on CPU | ✅ | 4.4 s speech in ~18 s first run, then ~1–2 s |
 | Chatterbox Multilingual — clone + `[laugh]` tags | ✅ | 6.4 s speech in ~22 s first run |
 | Qwen3-TTS 1.7B VoiceDesign — description → voice | ✅ | 5.9 s speech in ~26 s first run, saved as a new voice |
+| IndicF5 — 11 Indian languages, cloned voice (te/ta/or/hi/ml/bn verified) | ✅ | 4.3 s speech in ~5.9 s (RTF ≈ 1.4×, model load ~6 s); ~1.4 GB VRAM; Telugu/Tamil round-trip ASR similarity 0.96–0.97 |
 
 **Disk notes:** HuggingFace repos carry more than the runtime weights — `ResembleAI/chatterbox`
 pulls ~16 GB (all variants + dev artifacts) and VoiceDesign ~9 GB on disk. Disk is only needed
@@ -101,6 +127,6 @@ once; the catalog's `size_gb` reflects the runtime footprint, not the repo size.
 | Model | Why excluded |
 |---|---|
 | XTTS v2 (Coqui) | Coqui Public Model License — non-commercial |
-| F5-TTS | Weights CC-BY-NC |
+| F5-TTS | The original F5-TTS checkpoint is CC-BY-NC — the engine we ship is **IndicF5**, whose checkpoint is separately MIT-licensed by AI4Bharat |
 | IndexTTS-2 | Additional restrictions |
 | Fish Speech S2 | Research-only license |

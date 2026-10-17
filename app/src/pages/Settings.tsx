@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Compass, FolderOpen, Globe, HardDrive, Info, Plus, Save, Trash2, Type, Zap } from 'lucide-react'
+import { ArrowRight, Compass, FolderOpen, Globe, HardDrive, Info, KeyRound, Plus, Save, Trash2, Type, Zap } from 'lucide-react'
 import { api } from '../lib/api'
 import { useApp } from '../lib/store'
 import type { Settings as SettingsType } from '../lib/types'
@@ -195,6 +195,44 @@ export default function Settings() {
         </div>
       </section>
 
+      {/* hugging face */}
+      <section className="panel p-5">
+        <h2 className="mb-1.5 flex items-center gap-2 text-[13.5px] font-semibold">
+          <KeyRound size={15} className="text-accent-soft" /> Hugging Face
+        </h2>
+        <p className="mb-4 text-[11.5px] leading-relaxed text-fg-dim">
+          Only needed for <span className="text-fg-muted">gated</span> models (IndicF5 — the 11 Indian languages).
+          Accept the terms once on the model page, then paste a read token here. The token stays on this machine
+          and is used only to download model weights.
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="w-full max-w-[420px] min-w-[260px] flex-1">
+            <div className="mb-1.5 text-[11.5px] font-medium text-fg-muted">Read token</div>
+            <input
+              className="input font-mono !text-[12px]"
+              type="password"
+              placeholder="hf_…"
+              value={settings.hf_token || ''}
+              onChange={(e) => patch({ hf_token: e.target.value })}
+            />
+          </div>
+          <button
+            className="btn"
+            title="Create a free read token on Hugging Face"
+            onClick={() => (window as any).heyvoice?.openExternal?.('https://huggingface.co/settings/tokens')}
+          >
+            <Globe size={14} /> Get a token
+          </button>
+          <button
+            className="btn"
+            title="Open the IndicF5 model page — click “Agree and access repository” there"
+            onClick={() => (window as any).heyvoice?.openExternal?.('https://huggingface.co/ai4bharat/IndicF5')}
+          >
+            IndicF5 model page
+          </button>
+        </div>
+      </section>
+
       {/* gpu */}
       <section className="panel p-5">
         <h2 className="mb-3 flex items-center gap-2 text-[13.5px] font-semibold">
@@ -222,7 +260,7 @@ export default function Settings() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[260px] flex-1 text-[11.5px] leading-relaxed text-fg-dim">
             <span className="font-medium text-fg-muted">HeyVoices {info?.version}</span> — fully local AI voice studio.
-            Built with Qwen3-TTS (Apache-2.0), Chatterbox (MIT) and Kokoro (Apache-2.0).
+            Built with Qwen3-TTS (Apache-2.0), Chatterbox (MIT), Kokoro (Apache-2.0) and IndicF5 (MIT).
             The backend listens only on 127.0.0.1:17300 and never sends your audio anywhere.
             <div className="mt-2 font-medium text-accent-soft">Built by GeethuDino</div>
           </div>

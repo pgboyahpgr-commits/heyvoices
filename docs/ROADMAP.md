@@ -29,8 +29,9 @@
 - [x] One-click transcript upgrade: re-run ASR with large-v3-turbo on any upload or stored sample
       (updates the transcript in place, invalidates the cached clone prompt)
 - [x] Per-engine parameter surface in the UI: Chatterbox CFG/emotion, Qwen temperature/top-p/top-k/
-      rep-penalty, Kokoro speed — engine defaults shown as `auto`, one-click reset, values recorded
-      in `params.tuning`; `seed` now fixes the sampler for reproducible takes
+      rep-penalty, Kokoro speed, IndicF5 speed/CFG strength — engine defaults shown as `auto`,
+      one-click reset, values recorded in `params.tuning`; `seed` now fixes the sampler for
+      reproducible takes
 - [x] Model integrity checks + resume-aware download UI: per-model **Verify** (manifest baseline
       recorded on first run) and one-click **Repair** (resumable re-download of missing files)
 - [x] VRAM telemetry: live `/system/vram` poll with rolling sparkline + peak tooltip in the top bar
@@ -88,6 +89,11 @@
 - [ ] First-run model picker tuned per GPU
 
 ## Phase 5 — Expanding the engine set
+- [x] **IndicF5 (AI4Bharat, MIT)** — 11 Indian languages (Telugu, Tamil, Odia, Kannada, Malayalam,
+      Marathi, Punjabi, Gujarati, Bengali, Assamese, Hindi) with zero-shot cloning from one clip +
+      transcript; language-aware auto-routing + script detection, 5 bundled preset voices, vendored
+      MIT inference code (`engines/vendor_f5/`), gated-download UX (HF terms accept + token in
+      Settings) — verified end-to-end on the RTX 4060 (te/ta/or/hi/ml/bn generation, ASR round-trip)
 - [ ] LuxTTS (style transfer) if licenses check out
 - [ ] k2-fsa OmniVoice (646 languages) as an optional heavyweight engine
 - [ ] Fine-tune wizard for Qwen3-TTS (LoRA on personal recordings)

@@ -500,6 +500,14 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
             </div>
           )}
 
+          {samples.length > 0 && (
+            <div className="rounded-xl border border-line bg-white/[0.02] px-3 py-2 text-[11px] leading-relaxed text-fg-dim">
+              <span className="font-medium text-fg-muted">Indian languages?</span> With a good transcript, one clone can
+              speak all 11 — Telugu, Tamil, Kannada, Malayalam, Marathi, Odia, Punjabi, Gujarati, Bengali, Assamese
+              and Hindi (IndicF5).
+            </div>
+          )}
+
           <div className="flex justify-end">
             <button className="btn btn-primary" disabled={!samples.length} onClick={() => setStep(1)}>
               Next <ChevronRight size={14} />
@@ -531,6 +539,7 @@ function NewVoiceWizard({ open, onClose }: { open: boolean; onClose: () => void 
                 <option value="">Auto (recommended)</option>
                 <option value="qwen3-tts">Qwen3-TTS (best fidelity)</option>
                 <option value="chatterbox">Chatterbox (25 languages)</option>
+                <option value="indicf5">IndicF5 (11 Indian languages)</option>
               </select>
             </div>
           </div>
@@ -726,6 +735,7 @@ function EditModal({ voice, onClose }: { voice: Voice | null; onClose: () => voi
               <option value="">Auto</option>
               <option value="qwen3-tts">Qwen3-TTS</option>
               <option value="chatterbox">Chatterbox</option>
+              <option value="indicf5">IndicF5 (Indian languages)</option>
             </select>
           </div>
         </div>

@@ -89,7 +89,7 @@ export default function VoiceSelect({
                     <div className="truncate text-[12.5px] font-medium">{v.name}</div>
                     <div className="truncate text-[10.5px] text-fg-dim">{langLabel(v.language)}</div>
                   </div>
-                  {v.kind === 'preset' && <span className="badge !text-[9px]">{v.engine === 'kokoro' ? 'Kokoro' : 'Preset'}</span>}
+                  {v.kind === 'preset' && <span className="badge !text-[9px]">{v.engine === 'kokoro' ? 'Kokoro' : v.engine === 'indicf5' ? 'Indic' : 'Preset'}</span>}
                   {selected?.id === v.id && <Check size={13} className="text-accent-soft" />}
                 </button>
               ))}

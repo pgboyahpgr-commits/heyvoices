@@ -7,6 +7,7 @@ from pathlib import Path
 from ..config import MODELS_DIR
 from .base import EngineBase, EngineCaps, GenRequest  # noqa: F401
 from .chatterbox import ChatterboxEngine
+from .indicf5 import INDIC_LANGS, IndicF5Engine
 from .kokoro import KokoroEngine
 from .qwen3tts import Qwen3TTSEngine
 
@@ -15,6 +16,7 @@ ENGINES: dict[str, EngineBase] = {
     "qwen3-tts": Qwen3TTSEngine(),
     "chatterbox": ChatterboxEngine(),
     "kokoro": KokoroEngine(),
+    "indicf5": IndicF5Engine(),
 }
 
 
@@ -101,6 +103,24 @@ CATALOG: dict[str, dict] = {
         "languages": ["en", "es", "fr", "hi", "it", "pt", "ja", "zh"],
         "recommended": True,
     },
+    "indicf5": {
+        "name": "IndicF5 (AI4Bharat)", "engine": "indicf5",
+        "repo": "ai4bharat/IndicF5", "params": "0.3B",
+        "size_gb": 1.6, "vram_gb": 2.2, "license": "MIT",
+        "role": "11 Indian languages + zero-shot cloning",
+        "description": "Telugu, Tamil, Odia, Kannada, Malayalam, Marathi, Gujarati, Bengali, Assamese, "
+                       "Punjabi and Hindi (IIT Madras). Clone a voice once — it speaks all 11. "
+                       "Gated on Hugging Face: needs a free account and one click on 'Agree and access "
+                       "repository', then download here.",
+        "languages": ["as", "bn", "gu", "hi", "kn", "ml", "mr", "or", "pa", "ta", "te"],
+        "recommended": True,
+        "gated": True,
+        # pinned revisions so the bytes verified here are the bytes shipped
+        "revision": "fb652a96e508091045890dae5bb99fe511facbcf",
+        "extra_repos": [
+            {"repo": "charactr/vocos-mel-24khz", "revision": "0feb3fdd929bcd6649e0e7c5a688cf7dd012ef21"},
+        ],
+    },
 }
 
 
@@ -112,6 +132,34 @@ def _hf_repo_dir(repo: str) -> Path:
 def model_dir_for(model_id: str) -> Path | None:
     meta = CATALOG.get(model_id)
     return _hf_repo_dir(meta["repo"]) if meta else None
+
+
+# ------------------------------------------------- local snapshot lookup
+def local_snapshot_repo(repo: str, revision: str | None = None) -> Path | None:
+    """Resolved local snapshot directory of a downloaded HF repo (None if absent)."""
+    try:
+        from huggingface_hub import snapshot_download
+
+        return Path(snapshot_download(repo, revision=revision, local_files_only=True))
+    except Exception:
+        return None
+
+
+def local_snapshot(model_id: str) -> Path | None:
+    """Local snapshot directory of a catalog model (None if not downloaded)."""
+    meta = CATALOG.get(model_id)
+    if not meta:
+        return None
+    return local_snapshot_repo(meta["repo"], meta.get("revision"))
+
+
+def local_extra_snapshot(model_id: str, repo: str) -> Path | None:
+    """Local snapshot of one of a model's extra_repos (vocoders etc.)."""
+    meta = CATALOG.get(model_id) or {}
+    for extra in meta.get("extra_repos") or []:
+        if extra.get("repo") == repo:
+            return local_snapshot_repo(repo, extra.get("revision"))
+    return None
 
 
 # ------------------------------------------------- model integrity / repair

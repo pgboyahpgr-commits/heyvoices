@@ -20,3 +20,13 @@ qwen-tts
 chatterbox-tts
 kokoro>=0.9.4
 misaki[en]>=0.8
+
+# IndicF5 engine (AI4Bharat, MIT) — vendored F5-TTS inference stack.
+# x-transformers is pinned: F5 code targets the 1.31 API (2.x is incompatible).
+vocos>=0.1.0
+torchdiffeq>=0.2.4
+x-transformers==1.31.14
+jieba>=0.42.1
+pypinyin>=0.51
+pydub>=0.25.1
+encodec>=0.1.1

@@ -18,6 +18,10 @@ const ENGINE_INFO: Record<string, { tagline: string; caps: string[] }> = {
     tagline: 'Resemble AI · MIT · 25 languages',
     caps: ['Zero-shot cloning', 'Emotion control', 'Paralinguistic tags (Turbo)', 'PerTh watermark'],
   },
+  indicf5: {
+    tagline: 'AI4Bharat (IIT Madras) · MIT · 11 Indian languages',
+    caps: ['Zero-shot cloning', 'Telugu · Tamil · Odia +8 more', 'Cross-lingual', 'Gated on HF'],
+  },
   kokoro: {
     tagline: 'hexgrad · tiny + fast, runs on CPU',
     caps: ['54 preset voices', 'No cloning', 'Realtime on CPU'],
@@ -38,12 +42,15 @@ export default function Models() {
     return () => window.clearInterval(t)
   }, [downloading, refreshModels])
 
-  const engines = ['qwen3-tts', 'chatterbox', 'kokoro']
+  const engines = ['qwen3-tts', 'chatterbox', 'indicf5', 'kokoro']
 
   const download = async (id: string) => {
     try {
       await api.downloadModel(id)
-      toast('info', 'Download started — progress will appear here')
+      const m0 = models.find((x) => x.id === id)
+      toast('info', m0?.gated
+        ? 'Download started — IndicF5 is gated, so it only works once you accepted the terms on its model page and added a token in Settings'
+        : 'Download started — progress will appear here')
       refreshModels()
     } catch (e: any) { toast('error', e.message) }
   }
@@ -106,6 +113,7 @@ export default function Models() {
 function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () => void }) {
   const toast = useApp((s) => s.toast)
   const refreshModels = useApp((s) => s.refreshModels)
+  const setPage = useApp((s) => s.setPage)
   const [verifying, setVerifying] = useState(false)
   const [repairing, setRepairing] = useState(false)
   const [verify, setVerify] = useState<VerifyResult | null>(null)
@@ -156,9 +164,24 @@ function ModelRow({ model: m, onDownload }: { model: ModelInfo; onDownload: () =
           <span className="whitespace-nowrap text-[13.5px] font-semibold">{m.name}</span>
           <span className="badge">{m.params}</span>
           {m.recommended && <span className="badge badge-accent">Recommended</span>}
+          {m.gated && <span className="badge badge-warn">Gated on HF</span>}
           {stateBadge}
         </div>
         <div className="mt-1 text-[12px] text-fg-muted">{m.description}</div>
+        {m.gated && m.state === 'absent' && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] leading-relaxed text-fg-dim">
+            <span>Gated model: click</span>
+            <button
+              className="underline transition-colors hover:text-fg"
+              onClick={() => (window as any).heyvoice?.openExternal?.(`https://huggingface.co/${m.repo}`)}
+            >
+              “Agree and access repository”
+            </button>
+            <span>on the model page (free account), paste a read token in</span>
+            <button className="underline transition-colors hover:text-fg" onClick={() => setPage('settings')}>Settings</button>
+            <span>, then download here.</span>
+          </div>
+        )}
         <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-fg-dim">
           <span className={clsx('whitespace-nowrap font-medium', (m.license === 'MIT' || m.license === 'Apache-2.0') ? 'text-ok' : 'text-warn')}>
             {m.license}

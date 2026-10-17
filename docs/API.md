@@ -57,6 +57,7 @@ with requests.get("http://127.0.0.1:17300/system/events", stream=True) as r:
 PATCH expects `{ "patch": { ... } }`. Settings keys: `output_format`, `normalize_loudness`,
 `target_lufs`, `chunk_max_chars`, `crossfade_ms`, `default_engine`, `default_language`,
 `auto_unload`, `vram_budget_gb`, `transcribe_size` (Whisper model for reference clips),
+`hf_token` (Hugging Face read token — only needed for gated models such as IndicF5),
 `pronunciations` (`[{"from": "HeyVoices", "to": "Hey Voice"}]` — applied before synthesis).
 
 ## Voices
@@ -143,9 +144,10 @@ Changing samples invalidates the cached clone prompt automatically.
 {
   "text": "Line one. [[pause:500ms]] Line two.",
   "voice_id": "a1b2c3d4e5f6",     // omit + "design": true for VoiceDesign
-  "engine": null,                  // "qwen3-tts" | "chatterbox" | "kokoro" (optional)
+  "engine": null,                  // "qwen3-tts" | "chatterbox" | "indicf5" | "kokoro" (optional)
   "model": null,                   // explicit model id overrides everything
-  "language": "en",                // omit for the voice's language / auto
+  "language": "en",                // omit for the voice's language / auto. Indic text is detected
+                                   //   (te, ta, kn, ml, mr, or, pa, gu, bn, as, hi) and routed to IndicF5
   "instruct": "whisper softly",    // Qwen preset voices / VoiceDesign
   "exaggeration": 0.6,             // Chatterbox emotion
   "temperature": 0.8,
@@ -267,6 +269,9 @@ Fields: `file` (audio), `size` (`tiny|base|small|medium|large-v3|turbo`, default
 
 ### `POST /models/download`
 `{ "id": "chatterbox-turbo" }` → starts a background snapshot download.
+Gated models (`indicf5`) also need a Hugging Face read token (`hf_token` setting) and a one-time
+terms accept on the model page; if refused, an SSE `model_error` event arrives with
+`{ "id": "indicf5", "error": "...", "gated": true, "url": "https://huggingface.co/ai4bharat/IndicF5" }`.
 
 ### `POST /models/verify`
 `{ "id": "chatterbox-turbo" }` → checks every file against the manifest recorded at download
