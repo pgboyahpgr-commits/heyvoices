@@ -1,5 +1,6 @@
 // HeyVoices brand mark — a hand-built SVG waveform tile (no icon font, no raster).
-// Reused by the sidebar, splash screen and (as a standalone file) the favicon.
+// Four rounded bars, one per direction of the voice — a single mark for every
+// language the studio speaks. Reused by the sidebar, splash screen and the favicon.
 
 export function LogoMark({
   size = 36, animated = false, className,
@@ -18,7 +19,8 @@ export function LogoMark({
       <defs>
         <linearGradient id="hv-logo-tile" x1="8" y1="4" x2="42" y2="45" gradientUnits="userSpaceOnUse">
           <stop stopColor="#14b8a6" />
-          <stop offset="1" stopColor="#3b82f6" />
+          <stop offset="0.55" stopColor="#3b82f6" />
+          <stop offset="1" stopColor="#6366f1" />
         </linearGradient>
       </defs>
 
@@ -28,9 +30,10 @@ export function LogoMark({
 
       {/* waveform bars */}
       <g className="logo-wave" data-animated={animated ? 'true' : undefined}>
-        <rect x="11.8" y="19" width="4.8" height="10" rx="2.4" fill="#fff" opacity="0.88" />
-        <rect x="21.6" y="13" width="4.8" height="22" rx="2.4" fill="#fff" />
-        <rect x="31.4" y="17" width="4.8" height="14" rx="2.4" fill="#fff" opacity="0.94" />
+        <rect x="7.8" y="18" width="4.8" height="12" rx="2.4" fill="#fff" opacity="0.85" />
+        <rect x="17" y="14" width="4.8" height="20" rx="2.4" fill="#fff" />
+        <rect x="26.2" y="10.5" width="4.8" height="27" rx="2.4" fill="#fff" />
+        <rect x="35.4" y="16" width="4.8" height="16" rx="2.4" fill="#fff" opacity="0.9" />
       </g>
     </svg>
   )

@@ -15,7 +15,9 @@ from PIL import Image, ImageDraw
 S = 1024
 GRID = 48.0            # design grid of the SVG mark
 TILE_TOP = (0x14, 0xB8, 0xA6)
-TILE_BOT = (0x3B, 0x82, 0xF6)
+TILE_MID = (0x3B, 0x82, 0xF6)
+TILE_BOT = (0x63, 0x66, 0xF1)
+MID_STOP = 0.55
 
 OUT = Path(__file__).resolve().parent
 
@@ -33,7 +35,10 @@ def main() -> None:
     gy = (y / S) * GRID
     t = ((gx - 8.0) * 34.0 + (gy - 4.0) * 41.0) / (34.0**2 + 41.0**2)
     t = np.clip(t, 0.0, 1.0)
-    rgb = lerp(TILE_TOP, TILE_BOT, t).astype(np.uint8)
+    # three-stop gradient teal -> blue -> indigo, like the SVG tile
+    lo = lerp(TILE_TOP, TILE_MID, np.clip(t / MID_STOP, 0.0, 1.0))
+    hi = lerp(TILE_MID, TILE_BOT, np.clip((t - MID_STOP) / (1.0 - MID_STOP), 0.0, 1.0))
+    rgb = np.where((t <= MID_STOP)[:, :, None], lo, hi).astype(np.uint8)
 
     # rounded tile
     tile = Image.fromarray(rgb, "RGB")
@@ -58,9 +63,10 @@ def main() -> None:
 
     # waveform bars (x, y, height, alpha) from brand.tsx — white on the teal-blue tile
     bars = [
-        (11.8, 19, 10, 224),
-        (21.6, 13, 22, 255),
-        (31.4, 17, 14, 240),
+        (7.8, 18, 12, 217),
+        (17.0, 14, 20, 255),
+        (26.2, 10.5, 27, 255),
+        (35.4, 16, 16, 230),
     ]
     bw = round(4.8 * k)
     for bx, by, bh, alpha in bars:
