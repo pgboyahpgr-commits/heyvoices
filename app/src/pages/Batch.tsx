@@ -7,6 +7,7 @@ import {
 import clsx from 'clsx'
 import { api } from '../lib/api'
 import { useApp } from '../lib/store'
+import PageHeader from '../components/PageHeader'
 
 interface Row {
   key: string
@@ -108,47 +109,45 @@ export default function Batch() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-[260px]">
-          <h1 className="text-[22px] font-bold tracking-[-0.02em]">Batch</h1>
-          <p className="mt-0.5 text-[12.5px] text-fg-muted">
-            Bulk-generate voice lines — perfect for game dialogue, audiobook chapters, or content pipelines.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select className="select !w-auto" value={format} onChange={(e) => setFormat(e.target.value)}>
-            {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
-          </select>
-          <input
-            ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
-            onChange={(e) => e.target.files?.[0] && loadCsv(e.target.files[0])}
-          />
-          <button className="btn" onClick={() => fileRef.current?.click()}>
-            <FileSpreadsheet size={14} /> Load CSV
-          </button>
-          <button className="btn" onClick={openOutputs}><FolderOpen size={14} /> Output folder</button>
-          {lastBatchId && progress > 0 && (
-            <button
-              className="btn"
-              title="Download every finished take of the last run as a .zip"
-              onClick={() => {
-                const a = document.createElement('a')
-                a.href = api.exportBatchUrl(lastBatchId)
-                a.download = `heyvoice-batch-${lastBatchId}.zip`
-                document.body.appendChild(a)
-                a.click()
-                a.remove()
-              }}
-            >
-              <Download size={14} /> Export .zip
+      <PageHeader
+        title="Batch"
+        subtitle="Bulk-generate voice lines — perfect for game dialogue, audiobook chapters, or content pipelines."
+        actions={
+          <>
+            <select className="select !w-auto" value={format} onChange={(e) => setFormat(e.target.value)}>
+              {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
+            </select>
+            <input
+              ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
+              onChange={(e) => e.target.files?.[0] && loadCsv(e.target.files[0])}
+            />
+            <button className="btn" onClick={() => fileRef.current?.click()}>
+              <FileSpreadsheet size={14} /> Load CSV
             </button>
-          )}
-          <button className="btn btn-primary" disabled={running} onClick={runAll}>
-            {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-            {running ? `${progress}/${rows.length}` : 'Generate all'}
-          </button>
-        </div>
-      </div>
+            <button className="btn" onClick={openOutputs}><FolderOpen size={14} /> Output folder</button>
+            {lastBatchId && progress > 0 && (
+              <button
+                className="btn"
+                title="Download every finished take of the last run as a .zip"
+                onClick={() => {
+                  const a = document.createElement('a')
+                  a.href = api.exportBatchUrl(lastBatchId)
+                  a.download = `heyvoice-batch-${lastBatchId}.zip`
+                  document.body.appendChild(a)
+                  a.click()
+                  a.remove()
+                }}
+              >
+                <Download size={14} /> Export .zip
+              </button>
+            )}
+            <button className="btn btn-primary" disabled={running} onClick={runAll}>
+              {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+              {running ? `${progress}/${rows.length}` : 'Generate all'}
+            </button>
+          </>
+        }
+      />
 
       <div className="panel px-5 py-4 text-[12px] leading-relaxed text-fg-dim">
         <span className="font-medium text-fg-muted">CSV format:</span> one line per line of dialogue —

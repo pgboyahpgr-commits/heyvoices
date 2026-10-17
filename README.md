@@ -66,10 +66,12 @@ zero uploads**. Every model is open-licensed (Apache-2.0 / MIT).
   interrupted downloads) and repair it with a resumable re-download of just the missing files.
 - **Command palette** — `Ctrl+K` to jump anywhere or run quick actions (new voice, unload VRAM,
   open folders…).
-- **Redesigned workspace** — command bar with live GPU/VRAM status, grouped sidebar, and a Studio
-  with a sticky voice rail, always-visible take replay, and a polished player dock. Warm graphite +
-  amber theme (pro-audio console feel), a hand-built SVG brand mark (sidebar, splash, favicon,
-  installer icon), and custom SVG empty-state illustrations — no icon fonts or raster assets.
+- **Redesigned workspace** — a single minimal grey shell: sidebar with built-in command-palette
+  search, grouped navigation, and a live status column (job queue with cancel/reorder, GPU + VRAM
+  telemetry with sparkline, engine state). Studio keeps its sticky voice rail and take replay, now
+  as a clean flat take list, with a polished player dock. Grey + green-blue (teal) theme, a
+  hand-built SVG brand mark (sidebar, splash, favicon, installer icon), and custom SVG empty-state
+  illustrations — no icon fonts or raster assets.
 - **Local API** — REST + SSE for apps, agents, and stream tooling. `POST /speak` is a one-call
   text-to-audio endpoint. A built-in **MCP server** lets Claude and other agents call
   `speak`/`list_voices` directly — see [docs/MCP.md](docs/MCP.md).

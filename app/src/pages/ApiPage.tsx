@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Braces, Check, Copy, ExternalLink, Plug, Terminal } from 'lucide-react'
 import { BASE } from '../lib/api'
 import { useApp } from '../lib/store'
+import PageHeader from '../components/PageHeader'
 
 const ENDPOINTS: { method: string; path: string; desc: string }[] = [
   { method: 'GET', path: '/health', desc: 'Liveness probe — returns {status:"ok", version}' },
@@ -73,13 +74,10 @@ print("saved:", r.json()["url"])`
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-[22px] font-bold tracking-[-0.02em]">Local API</h1>
-        <p className="mt-0.5 text-[12.5px] text-fg-muted">
-          Every feature is a REST endpoint — wire HeyVoice into your apps, agents, games, or stream tools.
-          The server only listens on this machine (127.0.0.1).
-        </p>
-      </div>
+      <PageHeader
+        title="Local API"
+        subtitle="Every feature is a REST endpoint — wire HeyVoice into your apps, agents, games, or stream tools. The server only listens on this machine (127.0.0.1)."
+      />
 
       <div className="panel flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">

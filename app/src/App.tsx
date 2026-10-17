@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
-import TopBar from './components/TopBar'
 import Player from './components/Player'
 import CommandPalette from './components/CommandPalette'
 import { Toasts } from './components/ui'
@@ -29,7 +28,7 @@ export default function App() {
   if (!ready) {
     return (
       <div className="app-bg flex h-full flex-col items-center justify-center gap-5">
-        <div style={{ filter: 'drop-shadow(0 10px 32px rgba(245,158,11,0.35))' }}>
+        <div style={{ filter: 'drop-shadow(0 10px 32px rgba(20,184,166,0.35))' }}>
           <LogoMark size={64} animated />
         </div>
         <div className="text-center">
@@ -53,9 +52,8 @@ export default function App() {
     <div className="flex h-full">
       <Sidebar />
       <div className="app-bg flex min-w-0 flex-1 flex-col">
-        <TopBar />
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <div key={page} className="page-in mx-auto w-full max-w-[1240px] px-8 pb-12 pt-7">
+          <div key={page} className="page-in mx-auto w-full max-w-[1180px] px-8 pb-12 pt-8">
             {page === 'studio' && <Studio />}
             {page === 'story' && <Story />}
             {page === 'voices' && <Voices />}

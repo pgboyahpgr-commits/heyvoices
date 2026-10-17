@@ -9,6 +9,7 @@ import { useApp } from '../lib/store'
 import type { StoryLine } from '../lib/types'
 import { parseScript } from '../lib/script'
 import VoiceSelect from '../components/VoiceSelect'
+import PageHeader from '../components/PageHeader'
 import { Avatar, fmtDuration, Modal } from '../components/ui'
 
 const PAUSE_OPTIONS = [0, 200, 400, 800, 1500]
@@ -109,36 +110,31 @@ export default function Story() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-[280px] flex-1">
-          <h1 className="flex items-center gap-2 text-[22px] font-bold tracking-[-0.02em]">
-            <BookOpen size={20} className="text-accent-soft" /> Story
-          </h1>
-          <p className="mt-0.5 text-[12.5px] text-fg-muted">
-            Multi-speaker scripts — every line its own voice and pacing, rendered into one stitched track.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <span className="hidden text-[11.5px] tabular-nums text-fg-dim xl:block">
-            {activeCount} line{activeCount === 1 ? '' : 's'} · {chars} chars · ~{fmtDuration(estSec)}
-          </span>
-          <button className="btn" onClick={() => setImportOpen(true)} title="Paste a screenplay — lines and speakers are parsed automatically">
-            <FileText size={14} /> Import script
-          </button>
-          <select className="select !w-auto" value={format} onChange={(e) => setFormat(e.target.value)} title="Output format">
-            {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
-          </select>
-          <button
-            className="btn btn-primary"
-            disabled={busy || activeCount === 0}
-            onClick={() => renderStory({ format })}
-          >
-            {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            {busy ? `${Math.round((job?.progress ?? 0) * 100)}%` : 'Render story'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Story"
+        subtitle="Multi-speaker scripts — every line its own voice and pacing, rendered into one stitched track."
+        actions={
+          <>
+            <span className="hidden text-[11.5px] tabular-nums text-fg-dim xl:block">
+              {activeCount} line{activeCount === 1 ? '' : 's'} · {chars} chars · ~{fmtDuration(estSec)}
+            </span>
+            <button className="btn" onClick={() => setImportOpen(true)} title="Paste a screenplay — lines and speakers are parsed automatically">
+              <FileText size={14} /> Import script
+            </button>
+            <select className="select !w-auto" value={format} onChange={(e) => setFormat(e.target.value)} title="Output format">
+              {['wav', 'mp3', 'ogg', 'flac'].map((f) => <option key={f} value={f}>{f.toUpperCase()}</option>)}
+            </select>
+            <button
+              className="btn btn-primary"
+              disabled={busy || activeCount === 0}
+              onClick={() => renderStory({ format })}
+            >
+              {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {busy ? `${Math.round((job?.progress ?? 0) * 100)}%` : 'Render story'}
+            </button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
         {/* cast rail */}

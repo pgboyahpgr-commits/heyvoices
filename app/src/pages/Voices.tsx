@@ -9,6 +9,7 @@ import { useApp } from '../lib/store'
 import type { IngestResult, Voice } from '../lib/types'
 import { LANGUAGES, langLabel } from '../lib/types'
 import { Avatar, Modal, Progress, engineLabel, fmtDuration } from '../components/ui'
+import PageHeader from '../components/PageHeader'
 import { ArtVoices } from '../components/art'
 
 // Short lines for one-click voice previews, per language.
@@ -68,22 +69,20 @@ export default function Voices() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.02em]">Voices</h1>
-          <p className="mt-0.5 text-[12.5px] text-fg-muted">
-            {clonedCount} cloned · {voices.length - clonedCount} presets — clone from as little as 5 seconds of audio or video
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button className="btn" onClick={() => setDesignOpen(true)}>
-            <Wand2 size={14} className="text-accent-soft" /> Design a voice
-          </button>
-          <button className="btn btn-primary" onClick={() => setWizardOpen(true)}>
-            <Plus size={15} /> New voice
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Voices"
+        subtitle={`${clonedCount} cloned · ${voices.length - clonedCount} presets — clone from as little as 5 seconds of audio or video`}
+        actions={
+          <>
+            <button className="btn" onClick={() => setDesignOpen(true)}>
+              <Wand2 size={14} className="text-accent-soft" /> Design a voice
+            </button>
+            <button className="btn btn-primary" onClick={() => setWizardOpen(true)}>
+              <Plus size={15} /> New voice
+            </button>
+          </>
+        }
+      />
 
       <div className="flex items-center gap-3">
         <div className="flex rounded-xl border border-line bg-ink-850 p-1">

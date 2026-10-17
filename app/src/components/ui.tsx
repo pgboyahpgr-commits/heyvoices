@@ -22,7 +22,7 @@ export function Avatar({ voice, size = 38 }: { voice: Voice; size?: number }) {
       className="flex shrink-0 items-center justify-center rounded-full font-semibold"
       style={{
         width: size, height: size,
-        color: lum > 0.62 ? '#251603' : '#fff',
+        color: lum > 0.62 ? '#101114' : '#fff',
         background: `linear-gradient(135deg, ${voice.color}, ${voice.color}55)`,
         boxShadow: `inset 0 0 0 1.5px rgba(255,255,255,.16), 0 3px 12px -5px ${voice.color}66`,
         fontSize: size * 0.34,

@@ -9,6 +9,7 @@ import { useApp } from '../lib/store'
 import type { Generation, Voice } from '../lib/types'
 import { LANGUAGES, langLabel } from '../lib/types'
 import { Avatar, engineLabel, fmtDuration, Slider, Toggle, timeAgo } from '../components/ui'
+import PageHeader from '../components/PageHeader'
 import { ArtTakes } from '../components/art'
 
 const INSTRUCT_CHIPS = ['whisper softly', 'excited and energetic', 'calm, slow, cinematic', 'sad and reflective', 'authoritative news anchor']
@@ -110,7 +111,6 @@ export default function Studio() {
   }, [generations, takeFilter, takeQuery])
 
   const engineOf = (id: string) => models.find((m) => m.id === id)?.name ?? id
-  const loadedList = Object.values(info?.engines_loaded ?? {}).map(engineOf)
 
   const isChatterbox = voice?.engine === 'chatterbox' || draft.model.startsWith('chatterbox')
   const supportsInstruct = !voice || voice.engine === 'qwen3-tts'
@@ -140,18 +140,7 @@ export default function Studio() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* header */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.025em]">Studio</h1>
-          <p className="mt-0.5 text-[12.5px] text-fg-muted">Type, pick a voice, create. Everything runs on your GPU.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {loadedList.map((m) => (
-            <span key={m} className="badge badge-accent"><Zap size={10} /> {m}</span>
-          ))}
-        </div>
-      </div>
+      <PageHeader title="Studio" subtitle="Type, pick a voice, create — everything runs on your GPU." />
 
       {!anyModelReady && (
         <div className="panel flex items-center justify-between border-warn/25 bg-warn/[0.04] px-5 py-4">
@@ -215,7 +204,7 @@ export default function Studio() {
             <div className="px-5 pt-4">
               <textarea
                 ref={textRef}
-                className="textarea min-h-[168px] border-0 !bg-transparent px-0 pt-0 text-[15px] leading-relaxed focus:!shadow-none"
+                className="textarea min-h-[168px] border-0 !bg-transparent px-0 pt-0 !text-[15px] leading-relaxed focus:!shadow-none"
                 placeholder={'Write or paste your script…\n\nTips: [ [pause:600ms] ] inserts a timed pause · Chatterbox understands expressive tags like [laugh] or [whisper]'}
                 value={draft.text}
                 onChange={(e) => setDraft({ text: e.target.value })}
@@ -444,7 +433,7 @@ export default function Studio() {
             ) : filteredGens.length === 0 ? (
               <div className="panel py-10 text-center text-[12.5px] text-fg-dim">No takes match this filter.</div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="panel overflow-hidden">
                 {filteredGens.map((g) => (
                   <TakeRow key={g.id} gen={g} />
                 ))}
@@ -638,10 +627,8 @@ function TakeRow({ gen }: { gen: Generation }) {
 
   return (
     <div
-      className={clsx(
-        'panel panel-hover group flex cursor-pointer items-center gap-3.5 px-4 py-3 transition-all',
-        selected && '!border-accent/45 shadow-[0_0_0_1px_rgba(245,158,11,.32)]',
-      )}
+      className="take-row group"
+      data-on={selected}
       onClick={() => selectGen(gen)}
     >
       <button
@@ -676,7 +663,7 @@ function TakeRow({ gen }: { gen: Generation }) {
             className="flex-1 rounded-sm"
             style={{
               height: `${Math.max(8, p * 100)}%`,
-              background: selected ? 'linear-gradient(180deg,#f59e0b,#f97316)' : '#3a3020',
+              background: selected ? 'linear-gradient(180deg,#14b8a6,#3b82f6)' : '#2f353c',
             }}
           />
         ))}

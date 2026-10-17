@@ -23,8 +23,8 @@ from .engines import (CATALOG, ENGINES, disk_free_gb, get_engine, list_catalog,
 
 router = APIRouter()
 
-PALETTE = ["#F59E0B", "#F97316", "#F472B6", "#34D399", "#60A5FA", "#A78BFA",
-           "#FB7185", "#2DD4BF", "#FACC15", "#4ADE80"]
+PALETTE = ["#14B8A6", "#3B82F6", "#8B5CF6", "#F472B6", "#F59E0B", "#34D399",
+           "#60A5FA", "#FB7185", "#A78BFA", "#4ADE80"]
 
 
 def _color_for(name: str) -> str:

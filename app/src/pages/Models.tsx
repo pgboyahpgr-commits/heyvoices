@@ -6,6 +6,7 @@ import clsx from 'clsx'
 import { api } from '../lib/api'
 import { useApp } from '../lib/store'
 import type { ModelInfo, VerifyResult } from '../lib/types'
+import PageHeader from '../components/PageHeader'
 import { engineLabel } from '../components/ui'
 
 const ENGINE_INFO: Record<string, { tagline: string; caps: string[] }> = {
@@ -60,18 +61,16 @@ export default function Models() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[22px] font-bold tracking-[-0.02em]">Models</h1>
-          <p className="mt-0.5 text-[12.5px] text-fg-muted">
-            Download once, run forever. Models are stored inside the project ({info?.disk_free_gb} GB free disk).
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="btn" onClick={openFolder} title="Open the folder where model weights are stored"><FolderOpen size={14} /> Models folder</button>
-          <button className="btn" onClick={unloadAll} title="Free GPU memory — models reload automatically when needed"><HardDrive size={14} /> Unload VRAM</button>
-        </div>
-      </div>
+      <PageHeader
+        title="Models"
+        subtitle={`Download once, run forever. Models are stored inside the project (${info?.disk_free_gb} GB free disk).`}
+        actions={
+          <>
+            <button className="btn" onClick={openFolder} title="Open the folder where model weights are stored"><FolderOpen size={14} /> Models folder</button>
+            <button className="btn" onClick={unloadAll} title="Free GPU memory — models reload automatically when needed"><HardDrive size={14} /> Unload VRAM</button>
+          </>
+        }
+      />
 
       {engines.map((engineId) => {
         const list = models.filter((m) => m.engine === engineId)

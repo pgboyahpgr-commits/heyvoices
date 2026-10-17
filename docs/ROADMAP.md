@@ -51,6 +51,10 @@
 - [x] UI 4.0 redesign: warm graphite + amber palette (pro-audio console feel, no neon), ink-on-amber
       brand mark across sidebar/splash/favicon/installer icon, warm ambient glows, focus rings and
       selection accents to match
+- [x] UI 5.0 redesign: minimal grey shell with a green-blue (teal) accent — top bar removed, queue +
+      GPU/VRAM telemetry + engine state folded into the sidebar, command-palette search moved to the
+      sidebar, shared PageHeader on every page, takes as a flat list, flat surfaces and quiet borders
+      throughout, teal-blue brand mark (sidebar/splash/favicon/installer icon)
 - [x] Audiobook & subtitle export: per-take **.srt** (exact per-line timings for Story renders,
       sentence-weighted approximation otherwise; batch ZIPs include each take's .srt), 44.1 kHz
       **.m4b** with per-line chapter marks + tags, and 44.1 kHz **.mp3** with ID3v2 tags — all in

@@ -140,7 +140,7 @@ function createWindow() {
     height: 960,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#0F0D0A',
+    backgroundColor: '#101114',
     icon: fs.existsSync(DEV_ICON) ? DEV_ICON : undefined,
     autoHideMenuBar: true,
     title: 'HeyVoice',

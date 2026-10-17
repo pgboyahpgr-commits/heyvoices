@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { useApp } from '../lib/store'
 import type { Settings as SettingsType } from '../lib/types'
 import { LANGUAGES } from '../lib/types'
+import PageHeader from '../components/PageHeader'
 import { Slider, Toggle } from '../components/ui'
 
 export default function Settings() {
@@ -52,15 +53,15 @@ export default function Settings() {
 
   return (
     <div className="flex max-w-[760px] flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.02em]">Settings</h1>
-          <p className="mt-0.5 text-[12.5px] text-fg-muted">Tune generation defaults and storage.</p>
-        </div>
-        <button className="btn btn-primary" disabled={!dirty} onClick={save}>
-          <Save size={14} /> Save changes
-        </button>
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle="Tune generation defaults and storage."
+        actions={
+          <button className="btn btn-primary" disabled={!dirty} onClick={save}>
+            <Save size={14} /> Save changes
+          </button>
+        }
+      />
 
       {/* storage */}
       <section className="panel p-5">

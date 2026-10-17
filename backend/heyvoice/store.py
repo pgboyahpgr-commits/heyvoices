@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS voices (
     kind TEXT DEFAULT 'cloned',          -- cloned | preset | designed
     engine TEXT DEFAULT '',              -- engine hint ('' = auto)
     language TEXT DEFAULT 'auto',
-    color TEXT DEFAULT '#F59E0B',
+    color TEXT DEFAULT '#14B8A6',
     favorite INTEGER DEFAULT 0,
     samples TEXT DEFAULT '[]',           -- JSON [{id,file,transcript,duration,url}]
     meta TEXT DEFAULT '{}',
